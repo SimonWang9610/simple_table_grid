@@ -67,7 +67,7 @@ final class TableColumnManager with TableCoordinatorMixin {
       _pinnedColumnCount--;
     }
 
-    coordinator.adaptRemoval(newColumnIndices: newIndices);
+    coordinator.afterReindex(newColumnIndices: newIndices);
 
     coordinator.notifyRebuild();
   }
@@ -138,7 +138,7 @@ final class TableColumnManager with TableCoordinatorMixin {
     oldOrderedColumns.removeAt(from);
     oldOrderedColumns.insert(to, id);
 
-    coordinator.adaptReordering(from: from, to: to, forColumn: true);
+    coordinator.afterReorder(from: from, to: to, forColumn: true);
     setColumns(oldOrderedColumns);
 
     return true;

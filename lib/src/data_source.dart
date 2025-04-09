@@ -109,7 +109,7 @@ final class TableDataSource with TableCoordinatorMixin {
     _rows.clear();
     _rows.addAll(newValues);
 
-    coordinator.adaptRemoval(newRowIndices: newIndices);
+    coordinator.afterReindex(newRowIndices: newIndices);
 
     if (shouldNotify) {
       coordinator.notifyRebuild();
@@ -187,7 +187,7 @@ final class TableDataSource with TableCoordinatorMixin {
     final row = _rows.removeAt(from);
     _rows.insert(to, row);
 
-    coordinator.adaptReordering(
+    coordinator.afterReorder(
       from: from,
       to: to,
       forColumn: false,

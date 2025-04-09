@@ -224,20 +224,20 @@ final class ActionManager with TableCoordinatorMixin {
     _selectedCells.adopt(from, to, forColumn: forColumn);
   }
 
-  void replace({
+  void reindex({
     Map<int, int>? newRowIndices,
     Map<int, int>? newColumnIndices,
   }) {
     if (newRowIndices != null) {
-      _selectedRows.replace(newRowIndices);
-      _hoveringRows.replace(newRowIndices);
-      _selectedCells.replace(newRowIndices, byColumn: false);
+      _selectedRows.reindex(newRowIndices);
+      _hoveringRows.reindex(newRowIndices);
+      _selectedCells.reindex(newRowIndices, byColumn: false);
     }
 
     if (newColumnIndices != null) {
-      _selectedColumns.replace(newColumnIndices);
-      _hoveringColumns.replace(newColumnIndices);
-      _selectedCells.replace(newColumnIndices, byColumn: true);
+      _selectedColumns.reindex(newColumnIndices);
+      _hoveringColumns.reindex(newColumnIndices);
+      _selectedCells.reindex(newColumnIndices, byColumn: true);
     }
   }
 }

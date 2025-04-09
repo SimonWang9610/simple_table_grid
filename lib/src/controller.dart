@@ -162,7 +162,7 @@ final class _TableControllerImpl extends TableController
   }
 
   @override
-  void adaptReordering({
+  void afterReorder({
     required int from,
     required int to,
     required bool forColumn,
@@ -175,11 +175,11 @@ final class _TableControllerImpl extends TableController
   }
 
   @override
-  void adaptRemoval({
+  void afterReindex({
     Map<int, int>? newRowIndices,
     Map<int, int>? newColumnIndices,
   }) {
-    actionManager.replace(
+    actionManager.reindex(
       newRowIndices: newRowIndices,
       newColumnIndices: newColumnIndices,
     );

@@ -4,13 +4,15 @@ import 'package:simple_table_grid/simple_table_grid.dart';
 base mixin TableCoordinator {
   void notifyRebuild();
 
-  void adaptReordering({
+  /// sync reorder operation without [notifyRebuild]
+  void afterReorder({
     required int from,
     required int to,
     required bool forColumn,
   });
 
-  void adaptRemoval({
+  /// sync reindex operation without [notifyRebuild]
+  void afterReindex({
     Map<int, int>? newRowIndices,
     Map<int, int>? newColumnIndices,
   });
