@@ -1,3 +1,5 @@
+/// A class representing a cell index in a grid or table.
+/// [row] does not count the header row, and starts from 0.
 class CellIndex {
   final int row;
   final int column;

@@ -220,7 +220,6 @@ final class _TableControllerImpl extends TableController
     }
 
     final cellIndex = getCellIndex(vicinity);
-    final data = dataSource[cellIndex.row][columnId];
 
     return TableCellDetail(
       columnId: columnId,
@@ -228,30 +227,8 @@ final class _TableControllerImpl extends TableController
       isPinned: isPinned,
       selected: selected,
       hovering: hovering,
-      cellData: data,
+      cellData: dataSource.getCellData(cellIndex.row, columnId),
     ) as T;
-  }
-
-  @override
-  CellIndex getCellIndex(TableVicinity vicinity) {
-    final row = dataSource.toCellRow(vicinity.row);
-
-    assert(
-      row >= 0 && row < dataCount,
-      "Row index $row must be greater than or equal to 0",
-    );
-
-    assert(
-      vicinity.column >= 0 && vicinity.column < columnCount,
-      "Column index ${vicinity.column} must be greater than or equal to 0",
-    );
-
-    return CellIndex(row, vicinity.column);
-  }
-
-  @override
-  int toVicinityRow(int row) {
-    return dataSource.toVicinityRow(row);
   }
 
   @override

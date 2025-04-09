@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/controller.dart';
 import 'package:simple_table_grid/src/data_source.dart';
+import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 base mixin TableDataSourceImplMixin on TableController {
   @protected
@@ -68,4 +69,30 @@ base mixin TableDataSourceImplMixin on TableController {
 
   @override
   int get dataCount => dataSource.dataCount;
+
+  @override
+  int toVicinityRow(int dataIndex) {
+    assert(
+      dataIndex >= 0 && dataIndex < dataCount,
+      "Data index $dataIndex is out of bounds for rows of length $dataCount",
+    );
+    return dataSource.toVicinityRow(dataIndex);
+  }
+
+  @override
+  CellIndex getCellIndex(TableVicinity vicinity) {
+    final row = dataSource.toCellRow(vicinity.row);
+
+    assert(
+      row >= 0 && row < dataCount,
+      "Row index $row must be greater than or equal to 0",
+    );
+
+    assert(
+      vicinity.column >= 0 && vicinity.column < columnCount,
+      "Column index ${vicinity.column} must be greater than or equal to 0",
+    );
+
+    return CellIndex(row, vicinity.column);
+  }
 }

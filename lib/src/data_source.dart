@@ -175,6 +175,10 @@ final class TableDataSource with TableCoordinatorMixin {
     return _rows[index];
   }
 
+  dynamic getCellData(int dataIndex, ColumnId columnId) {
+    return _rows[dataIndex][columnId];
+  }
+
   bool _reorderWithChecker(
     int from,
     int to,
