@@ -11,29 +11,28 @@ and the Flutter guide for
 [developing packages and plugins](https://flutter.dev/to/develop-packages).
 -->
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
 
-## Features
+## TODOs
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
 
-## Getting started
+### Table outer border
+1. get the right-most visible column (trailing offset) (HeaderCellWidget/SingleChildRenderObjectWidget)
+2. get the left-most visible column (leading offset)
+3. get the bottom-most visible row (trailing offset) (RowCellWidget/SingleChildRenderObjectWidget)
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+### Table Loading
+1. markAsLoading
+2. markAsLoaded
 
-## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+### Table Drag Reordering (cursor indicator)
+1. column drag reordering
+2. row drag reordering
 
-```dart
-const like = 'sample';
-```
+### Table Resizing (cursor indicator)
+1. column resizing
+2. row resizing
 
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+### Table Data Exporter
+1. export excel file
+2. export pdf file
