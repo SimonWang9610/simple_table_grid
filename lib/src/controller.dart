@@ -19,7 +19,7 @@ abstract base class TableController with ChangeNotifier {
   factory TableController({
     required List<ColumnId> columns,
     required TableExtentManager extentManager,
-    List initialRows = const [],
+    List<TableRowData> initialRows = const [],
     bool alwaysShowHeader = true,
     List<TableSelectionStrategy> selectionStrategies = const [
       TableSelectionStrategy.row
@@ -69,7 +69,7 @@ abstract base class TableController with ChangeNotifier {
   int get dataCount;
 
   void addRows(
-    List rows, {
+    List<TableRowData> rows, {
     bool skipDuplicates = false,
     bool removePlaceholder = true,
   });
@@ -107,7 +107,7 @@ final class _TableControllerImpl extends TableController
   _TableControllerImpl({
     required List<ColumnId> columns,
     required TableExtentManager extentManager,
-    List initialRows = const [],
+    List<TableRowData> initialRows = const [],
     bool alwaysShowHeader = true,
     List<TableSelectionStrategy> selectionStrategies = const [
       TableSelectionStrategy.row
@@ -123,9 +123,10 @@ final class _TableControllerImpl extends TableController
     )..bindCoordinator(this);
 
     dataSource = TableDataSource(
-      rows: initialRows,
       alwaysShowHeader: alwaysShowHeader,
-    )..bindCoordinator(this);
+    )
+      ..bindCoordinator(this)
+      ..add(initialRows);
 
     columnManager = TableColumnManager()
       ..bindCoordinator(this)
@@ -219,6 +220,7 @@ final class _TableControllerImpl extends TableController
     }
 
     final cellIndex = getCellIndex(vicinity);
+    final data = dataSource[cellIndex.row][columnId];
 
     return TableCellDetail(
       columnId: columnId,
@@ -226,7 +228,7 @@ final class _TableControllerImpl extends TableController
       isPinned: isPinned,
       selected: selected,
       hovering: hovering,
-      rowData: dataSource[cellIndex.row],
+      cellData: data,
     ) as T;
   }
 

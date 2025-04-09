@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/controller.dart';
 import 'package:simple_table_grid/src/data_source.dart';
 
@@ -8,7 +9,7 @@ base mixin TableDataSourceImplMixin on TableController {
 
   @override
   void addRows(
-    List rows, {
+    List<TableRowData> rows, {
     bool skipDuplicates = false,
     bool removePlaceholder = true,
   }) {

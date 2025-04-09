@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 
 base mixin TableCoordinator {
   void notifyRebuild();
@@ -15,6 +16,8 @@ base mixin TableCoordinator {
   });
 
   bool isColumnHeader(int vicinityRow);
+
+  List<ColumnId> get orderedColumns;
 }
 
 base mixin TableCoordinatorMixin {

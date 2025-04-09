@@ -1,14 +1,15 @@
+import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/coordinator.dart';
 
 final class TableDataSource with TableCoordinatorMixin {
   TableDataSource({
-    List rows = const [],
+    List<TableRowData> rows = const [],
     bool alwaysShowHeader = true,
   }) : _alwaysShowHeader = alwaysShowHeader {
     add(rows);
   }
 
-  final _rows = [];
+  final _rows = <TableRowData>[];
 
   int get dataCount => _rows.length;
 
@@ -34,9 +35,28 @@ final class TableDataSource with TableCoordinatorMixin {
   }
 
   void add(
-    List rows, {
+    List<TableRowData> rows, {
     bool skipDuplicates = false,
   }) {
+    if (rows.isEmpty) return;
+
+    assert(
+      () {
+        final columns = coordinator.orderedColumns;
+
+        for (final row in rows) {
+          for (final column in columns) {
+            if (!row.containsKey(column)) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+      }(),
+      "Some row data do not contain all columns",
+    );
+
     bool shouldNotify = rows.isNotEmpty;
 
     if (!skipDuplicates) {
@@ -77,7 +97,7 @@ final class TableDataSource with TableCoordinatorMixin {
       }
     }
 
-    final newValues = [];
+    final newValues = <TableRowData>[];
     final oldIndices = indexMapped.keys.toList();
 
     for (int i = 0; i < oldIndices.length; i++) {

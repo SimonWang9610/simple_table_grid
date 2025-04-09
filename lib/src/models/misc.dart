@@ -23,3 +23,5 @@ typedef TableCellDataExtractor<T> = dynamic Function(
   T rowData,
   ColumnId columnId,
 );
+
+typedef TableRowData = Map<ColumnId, dynamic>;

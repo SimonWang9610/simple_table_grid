@@ -231,11 +231,13 @@ final class ActionManager with TableCoordinatorMixin {
     if (newRowIndices != null) {
       _selectedRows.replace(newRowIndices);
       _hoveringRows.replace(newRowIndices);
+      _selectedCells.replace(newRowIndices, byColumn: false);
     }
 
     if (newColumnIndices != null) {
       _selectedColumns.replace(newColumnIndices);
       _hoveringColumns.replace(newColumnIndices);
+      _selectedCells.replace(newColumnIndices, byColumn: true);
     }
   }
 }

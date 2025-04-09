@@ -74,14 +74,14 @@ final class ColumnHeaderDetail extends CellDetail {
   }
 }
 
-final class TableCellDetail extends CellDetail {
+final class TableCellDetail<T> extends CellDetail {
   final CellIndex index;
-  final Object rowData;
+  final T? cellData;
 
   const TableCellDetail({
     required super.columnId,
     required this.index,
-    required this.rowData,
+    this.cellData,
     super.isPinned = false,
     super.selected = false,
     super.hovering = false,
@@ -96,7 +96,7 @@ final class TableCellDetail extends CellDetail {
         other.isPinned == isPinned &&
         other.selected == selected &&
         other.hovering == hovering &&
-        other.rowData == rowData;
+        other.cellData == cellData;
   }
 
   @override
@@ -106,11 +106,11 @@ final class TableCellDetail extends CellDetail {
         isPinned.hashCode ^
         selected.hashCode ^
         hovering.hashCode ^
-        rowData.hashCode;
+        cellData.hashCode;
   }
 
   @override
   String toString() {
-    return 'TableCellDetail(columnId: $columnId, index: $index, rowData: $rowData, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
+    return 'TableCellDetail(columnId: $columnId, index: $index, cellData: $cellData, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
   }
 }

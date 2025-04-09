@@ -39,7 +39,7 @@ sealed class TableSelection<T> extends ChangeNotifier
   /// This is useful when the user is dragging the header to reorder it.
   void adopt(int from, int to, {bool forColumn = true});
 
-  void replace(Map<int, int> newIndices);
+  void replace(Map<int, int> newIndices, {bool byColumn = false});
 
   void select(
     T value, {
@@ -157,7 +157,7 @@ final class _LineSelection extends TableSelection<int> {
   }
 
   @override
-  void replace(Map<int, int> newIndices) {
+  void replace(Map<int, int> newIndices, {bool byColumn = false}) {
     final oldSelected = selected;
     _selectedLines.clear();
 
@@ -250,8 +250,23 @@ final class _CellSelection extends TableSelection<CellIndex> {
   }
 
   @override
-  void replace(Map<int, int> newIndices) =>
-      throw UnimplementedError('replace is not supported for cell selection.');
+  void replace(Map<int, int> newIndices, {bool byColumn = false}) {
+    final oldSelected = selected;
+    _selectedCells.clear();
+
+    for (final cell in oldSelected) {
+      final target = byColumn ? cell.column : cell.row;
+
+      if (newIndices.containsKey(target)) {
+        final newCell = CellIndex(
+          byColumn ? cell.row : newIndices[target]!,
+          byColumn ? newIndices[target]! : cell.column,
+        );
+
+        _selectedCells.add(newCell);
+      }
+    }
+  }
 
   @override
   bool _select(CellIndex cell) => _selectedCells.add(cell);
