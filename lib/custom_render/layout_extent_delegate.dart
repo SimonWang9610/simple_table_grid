@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 
-abstract class CellLayoutExtentDelegate {
+import 'package:flutter/widgets.dart';
+
+// todo: child builder logic
+abstract class CellLayoutExtentDelegate extends TwoDimensionalChildDelegate {
   int get rowCount;
   int get columnCount;
   int get pinnedRowCount;
@@ -40,7 +43,7 @@ final class _FixedExtent extends Extent {
     }
 
     final allowed = math.min(pixels, remainingSpace);
-    return allowed;
+    return allowed >= 0 ? allowed : 0;
   }
 }
 
@@ -62,7 +65,8 @@ final class _FractionalExtent extends Extent {
     }
 
     final double allowed = math.min(pixels, remainingSpace);
-    return allowed;
+
+    return allowed >= 0 ? allowed : 0;
   }
 }
 
@@ -75,6 +79,6 @@ final class _RemainingExtent extends Extent {
     required double remainingSpace,
     bool pinned = false,
   }) {
-    return remainingSpace;
+    return remainingSpace > 0 ? remainingSpace : 0;
   }
 }
