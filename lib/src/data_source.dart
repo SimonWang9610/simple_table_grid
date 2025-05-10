@@ -1,5 +1,4 @@
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/components/coordinator.dart';
 
 final class TableDataSource with TableCoordinatorMixin {
   TableDataSource({

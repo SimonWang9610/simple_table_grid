@@ -136,7 +136,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         final columnSpan = _columnMetrics[column]!;
 
         final cell = buildOrObtainChildFor(
-          ChildVicinity(xIndex: row, yIndex: column),
+          ChildVicinity(xIndex: column, yIndex: row),
         );
 
         if (cell != null) {
@@ -717,12 +717,13 @@ class _Metrics {
     if (_firstNonPinned != null || value == null) {
       return;
     }
+
     _firstNonPinned = value;
   }
 
   int? get lastNonPinned => _lastNonPinned;
   set lastNonPinned(int? value) {
-    if (_firstNonPinned != null || _lastNonPinned != null || value == null) {
+    if (_firstNonPinned == null || _lastNonPinned != null || value == null) {
       return;
     }
 

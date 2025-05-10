@@ -1,74 +1,84 @@
-import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
-import 'package:simple_table_grid/custom_render/delegate.dart';
-import 'package:simple_table_grid/custom_render/viewport.dart';
+import 'package:flutter/material.dart';
+import 'package:simple_table_grid/custom_render/layout_extent_delegate.dart';
+import 'package:simple_table_grid/custom_render/table_grid_view.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 
-import 'layout_extent_delegate.dart';
-
-class TableGridView extends TwoDimensionalScrollView {
-  const TableGridView({
+class TableGrid extends StatelessWidget {
+  final TableController controller;
+  final ScrollController? horizontalScrollController;
+  final ScrollController? verticalScrollController;
+  final ScrollPhysics? horizontalScrollPhysics;
+  final ScrollPhysics? verticalScrollPhysics;
+  final TableCellDetailBuilder<TableCellDetail> cellBuilder;
+  final TableCellDetailBuilder<ColumnHeaderDetail> columnBuilder;
+  const TableGrid({
     super.key,
-    super.primary,
-    super.mainAxis,
-    super.horizontalDetails,
-    super.verticalDetails,
-    super.cacheExtent,
-    required CellLayoutExtentDelegate super.delegate,
-    super.diagonalDragBehavior = DiagonalDragBehavior.none,
-    super.dragStartBehavior,
-    super.keyboardDismissBehavior,
-    super.clipBehavior,
+    required this.controller,
+    required this.cellBuilder,
+    required this.columnBuilder,
+    this.horizontalScrollController,
+    this.horizontalScrollPhysics,
+    this.verticalScrollController,
+    this.verticalScrollPhysics,
   });
 
-  TableGridView.builder({
-    super.key,
-    super.primary,
-    super.mainAxis,
-    super.horizontalDetails,
-    super.verticalDetails,
-    super.cacheExtent,
-    super.diagonalDragBehavior = DiagonalDragBehavior.none,
-    super.dragStartBehavior,
-    super.keyboardDismissBehavior,
-    super.clipBehavior,
-    required int columnCount,
-    required int rowCount,
-    int pinnedColumnCount = 0,
-    int pinnedRowCount = 0,
-    required CellExtentBuilder rowExtentBuilder,
-    required CellExtentBuilder columnExtentBuilder,
-    required CellWidgetBuilder builder,
-  })  : assert(pinnedColumnCount >= 0),
-        assert(pinnedRowCount >= 0),
-        assert(rowCount >= 0),
-        assert(columnCount >= 0),
-        assert(pinnedColumnCount <= columnCount),
-        assert(pinnedRowCount <= rowCount),
-        super(
-          delegate: TableGridCellBuilderDelegate(
-            columnCount: columnCount,
-            rowCount: rowCount,
-            builder: builder,
-            rowExtentBuilder: rowExtentBuilder,
-            columnExtentBuilder: columnExtentBuilder,
-          ),
-        );
-
   @override
-  TableGridViewport buildViewport(
-    BuildContext context,
-    ViewportOffset verticalOffset,
-    ViewportOffset horizontalOffset,
-  ) {
-    return TableGridViewport(
-      verticalOffset: verticalOffset,
-      horizontalOffset: horizontalOffset,
-      verticalAxisDirection: verticalDetails.direction,
-      horizontalAxisDirection: horizontalDetails.direction,
-      delegate: delegate as CellLayoutExtentDelegate,
-      mainAxis: mainAxis,
-      cacheExtent: cacheExtent,
-      clipBehavior: clipBehavior,
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.black),
+      ),
+      child: ListenableBuilder(
+        listenable: controller,
+        builder: (_, __) {
+          print(
+              "pinnedColumnCount: ${controller.pinnedColumnCount}, pinnedRowCount: ${controller.pinnedRowCount}");
+
+          return TableGridView.builder(
+            mainAxis: Axis.horizontal,
+            horizontalDetails: ScrollableDetails.horizontal(
+              controller: horizontalScrollController,
+              physics: horizontalScrollPhysics ?? const ClampingScrollPhysics(),
+            ),
+            verticalDetails: ScrollableDetails.vertical(
+              controller: verticalScrollController,
+              physics: verticalScrollPhysics ?? const ClampingScrollPhysics(),
+            ),
+            columnCount: controller.columnCount,
+            rowCount: controller.rowCount,
+            pinnedColumnCount: controller.pinnedColumnCount,
+            pinnedRowCount: controller.pinnedRowCount,
+            rowExtentBuilder: (index) {
+              return Extent.fixed(60);
+            },
+            columnExtentBuilder: (index) => Extent.fixed(100),
+            builder: (_, vicinity) {
+              final listenable = controller.getCellActionNotifier(vicinity);
+
+              return listenable == null
+                  ? _buildCellChild(context, vicinity)
+                  : ListenableBuilder(
+                      listenable: listenable,
+                      builder: (ctx, _) => _buildCellChild(ctx, vicinity),
+                    );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCellChild(BuildContext context, ChildVicinity vicinity) {
+    final detail = controller.getCellDetail(vicinity);
+
+    final child = switch (detail) {
+      ColumnHeaderDetail() => columnBuilder(context, detail),
+      TableCellDetail() => cellBuilder(context, detail),
+    };
+
+    return KeyedSubtree(
+      // key: ValueKey(detail),
+      child: child,
     );
   }
 }

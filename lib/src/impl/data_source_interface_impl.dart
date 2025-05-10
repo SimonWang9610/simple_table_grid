@@ -1,8 +1,6 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/custom_render/table_grid_view.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/controller.dart';
-import 'package:simple_table_grid/src/data_source.dart';
-import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 base mixin TableDataSourceImplMixin on TableController {
   @protected
@@ -80,7 +78,7 @@ base mixin TableDataSourceImplMixin on TableController {
   }
 
   @override
-  CellIndex getCellIndex(TableVicinity vicinity) {
+  CellIndex getCellIndex(ChildVicinity vicinity) {
     final row = dataSource.toCellRow(vicinity.row);
 
     assert(

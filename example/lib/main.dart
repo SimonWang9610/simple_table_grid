@@ -26,14 +26,7 @@ class _MyAppState extends State<MyApp> {
   );
 
   late final _controller = TableController(
-    columns: [
-      "A",
-      "B",
-      "C",
-      "D",
-      "E",
-      "F",
-    ],
+    columns: ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
     extentManager: _extentManager,
     hoveringStrategies: [
       TableHoveringStrategy.row,
@@ -62,21 +55,21 @@ class _MyAppState extends State<MyApp> {
           controller: _controller,
           cellBuilder: _buildCell,
           columnBuilder: _buildColumn,
-          border: TableGridBorder(
-              // vertical: BorderSide(
-              //   color: Colors.red,
-              //   width: 2,
-              // ),
-              // horizontal: BorderSide(
-              //   color: Colors.black,
-              //   width: 2,
-              // ),
-              ),
-          loadingBuilder: (ctx) {
-            return CircularProgressIndicator(
-              color: Colors.red,
-            );
-          },
+          // border: TableGridBorder(
+          //     // vertical: BorderSide(
+          //     //   color: Colors.red,
+          //     //   width: 2,
+          //     // ),
+          //     // horizontal: BorderSide(
+          //     //   color: Colors.black,
+          //     //   width: 2,
+          //     // ),
+          //     ),
+          // loadingBuilder: (ctx) {
+          //   return CircularProgressIndicator(
+          //     color: Colors.red,
+          //   );
+          // },
         ),
       ),
       persistentFooterAlignment: AlignmentDirectional.center,

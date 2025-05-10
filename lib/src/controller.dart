@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/custom_render/table_grid_view.dart';
 import 'package:simple_table_grid/src/components/action_manager.dart';
 import 'package:simple_table_grid/src/components/column_manager.dart';
 import 'package:simple_table_grid/src/components/coordinator.dart';
@@ -89,9 +90,9 @@ abstract base class TableController with ChangeNotifier {
   TableSpan buildRowSpan(int index, TableGridBorder border);
   TableSpan buildColumnSpan(int index, TableGridBorder border);
 
-  T getCellDetail<T extends CellDetail>(TableVicinity vicinity);
-  Listenable? getCellActionNotifier(TableVicinity vicinity);
-  CellIndex getCellIndex(TableVicinity vicinity);
+  T getCellDetail<T extends CellDetail>(ChildVicinity vicinity);
+  Listenable? getCellActionNotifier(ChildVicinity vicinity);
+  CellIndex getCellIndex(ChildVicinity vicinity);
 
   int toVicinityRow(int row);
 
@@ -200,7 +201,7 @@ final class _TableControllerImpl extends TableController
   }
 
   @override
-  T getCellDetail<T extends CellDetail>(TableVicinity vicinity) {
+  T getCellDetail<T extends CellDetail>(ChildVicinity vicinity) {
     final selected =
         actionManager.isCellSelected(vicinity.row, vicinity.column);
     final hovering =

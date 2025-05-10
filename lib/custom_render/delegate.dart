@@ -56,6 +56,7 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     assert(value >= 0);
     assert(value <= columnCount);
     _pinnedColumnCount = value;
+    print("pinnedColumnCount: $_pinnedColumnCount");
     notifyListeners();
   }
 

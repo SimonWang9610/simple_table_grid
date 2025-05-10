@@ -1,10 +1,10 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/custom_render/table_grid_view.dart';
 import 'package:simple_table_grid/src/components/action_manager.dart';
 import 'package:simple_table_grid/src/components/coordinator.dart';
 import 'package:simple_table_grid/src/controller.dart';
 import 'package:simple_table_grid/src/models/cell_index.dart';
 import 'package:simple_table_grid/src/models/misc.dart';
-import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 base mixin TableActionImplMixin on TableController, TableCoordinator {
   @protected
@@ -131,7 +131,7 @@ base mixin TableActionImplMixin on TableController, TableCoordinator {
   }
 
   @override
-  Listenable? getCellActionNotifier(TableVicinity vicinity) {
+  Listenable? getCellActionNotifier(ChildVicinity vicinity) {
     return actionManager.getCellActionNotifier(vicinity.row, vicinity.column);
   }
 }
