@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 // todo: child builder logic
-abstract class CellLayoutExtentDelegate extends TwoDimensionalChildDelegate {
+mixin CellLayoutExtentDelegate on TwoDimensionalChildDelegate {
   int get rowCount;
   int get columnCount;
   int get pinnedRowCount;
