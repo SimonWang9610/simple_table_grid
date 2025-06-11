@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
-import 'package:simple_table_grid/custom_render/table_grid_view.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
+import 'package:simple_table_grid/src/models/key.dart';
 
 base mixin TableDataSourceImplMixin on TableController {
   @protected
@@ -8,14 +8,11 @@ base mixin TableDataSourceImplMixin on TableController {
 
   @override
   void addRows(
-    List<TableRowData> rows, {
+    List<RowData> rows, {
     bool skipDuplicates = false,
     bool removePlaceholder = true,
   }) {
-    dataSource.add(
-      rows,
-      skipDuplicates: skipDuplicates,
-    );
+    dataSource.add(rows);
   }
 
   @override
@@ -34,24 +31,17 @@ base mixin TableDataSourceImplMixin on TableController {
 
   @override
   void reorderRow(int fromDataIndex, int toDataIndex) {
-    dataSource.reorder(
-      toVicinityRow(fromDataIndex),
-      toVicinityRow(toDataIndex),
-    );
+    dataSource.reorder(fromDataIndex, toDataIndex);
   }
 
   @override
   void pinRow(int dataIndex) {
-    dataSource.pin(
-      toVicinityRow(dataIndex),
-    );
+    dataSource.pin(dataIndex);
   }
 
   @override
   void unpinRow(int dataIndex) {
-    dataSource.unpin(
-      toVicinityRow(dataIndex),
-    );
+    dataSource.unpin(dataIndex);
   }
 
   @override
@@ -69,12 +59,12 @@ base mixin TableDataSourceImplMixin on TableController {
   int get dataCount => dataSource.dataCount;
 
   @override
-  int toVicinityRow(int dataIndex) {
+  int toVicinityRow(int row) {
     assert(
-      dataIndex >= 0 && dataIndex < dataCount,
-      "Data index $dataIndex is out of bounds for rows of length $dataCount",
+      row >= 0 && row < dataCount,
+      "Data index $row is out of bounds for rows of length $dataCount",
     );
-    return dataSource.toVicinityRow(dataIndex);
+    return dataSource.toVicinityRow(row);
   }
 
   @override

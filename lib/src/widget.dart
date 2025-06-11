@@ -72,7 +72,7 @@ class TableGrid extends StatelessWidget {
   }
 
   TableViewCell _buildCell(BuildContext context, TableVicinity vicinity) {
-    final listenable = controller.getCellActionNotifier(vicinity);
+    final listenable = controller.getCellFocusNotifier(vicinity);
 
     return TableViewCell(
       child: listenable != null

@@ -1,16 +1,15 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/custom_render/table_grid_view.dart';
-import 'package:simple_table_grid/src/components/action_manager.dart';
 import 'package:simple_table_grid/src/components/column_manager.dart';
 import 'package:simple_table_grid/src/components/coordinator.dart';
 import 'package:simple_table_grid/src/components/extent_manager.dart';
+import 'package:simple_table_grid/src/components/focus_manager.dart';
 import 'package:simple_table_grid/src/data_source.dart';
-import 'package:simple_table_grid/src/impl/action_interface_impl.dart';
 import 'package:simple_table_grid/src/impl/column_interface_impl.dart';
 import 'package:simple_table_grid/src/impl/data_source_interface_impl.dart';
 import 'package:simple_table_grid/src/models/cell_detail.dart';
 import 'package:simple_table_grid/src/models/cell_index.dart';
-import 'package:simple_table_grid/src/models/misc.dart';
+import 'package:simple_table_grid/src/models/key.dart';
 import 'package:simple_table_grid/src/models/table_grid_border.dart';
 import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
@@ -18,16 +17,12 @@ abstract base class TableController with ChangeNotifier {
   TableController._();
 
   factory TableController({
-    required List<ColumnId> columns,
+    required List<ColumnKey> columns,
     required TableExtentManager extentManager,
-    List<TableRowData> initialRows = const [],
+    List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
-    List<TableSelectionStrategy> selectionStrategies = const [
-      TableSelectionStrategy.row
-    ],
-    List<TableHoveringStrategy> hoveringStrategies = const [
-      TableHoveringStrategy.row
-    ],
+    List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
+    List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
   }) =>
       _TableControllerImpl(
         columns: columns,
@@ -39,30 +34,35 @@ abstract base class TableController with ChangeNotifier {
       );
 
   void updateStrategies({
-    List<TableSelectionStrategy>? selectionStrategies,
-    List<TableHoveringStrategy>? hoveringStrategies,
+    List<FocusStrategy>? selectionStrategies,
+    List<FocusStrategy>? hoveringStrategies,
   });
 
   void select({
-    List<int>? rows,
-    List<int>? columns,
-    List<CellIndex>? cells,
+    List<RowKey>? rows,
+    List<ColumnKey>? columns,
+    List<CellKey>? cells,
   });
-  void unselect({List<int>? rows, List<int>? columns, List<CellIndex>? cells});
+  void unselect({
+    List<RowKey>? rows,
+    List<ColumnKey>? columns,
+    List<CellKey>? cells,
+  });
 
-  void hoverOn({int? row, int? column});
-  void hoverOff({int? row, int? column});
+  void hoverOn({RowKey? row, ColumnKey? column});
+  void hoverOff({RowKey? row, ColumnKey? column});
+  Listenable? getCellFocusNotifier(ChildVicinity vicinity);
 
-  bool isCellSelected(int row, int column);
-  bool isCellHovered(int row, int column);
+  // bool isCellSelected(CellKey key);
+  // bool isCellHovering(CellKey key);
 
   int get columnCount;
   int get pinnedColumnCount;
-  void reorderColumn(ColumnId id, int to);
-  void addColumn(ColumnId column, {bool pinned = false});
-  void removeColumn(ColumnId id);
-  void pinColumn(ColumnId id);
-  void unpinColumn(ColumnId id);
+  void reorderColumn(ColumnKey id, int to);
+  void addColumn(ColumnKey column, {bool pinned = false});
+  void removeColumn(ColumnKey id);
+  void pinColumn(ColumnKey id);
+  void unpinColumn(ColumnKey id);
   bool isColumnHeader(int vicinityRow);
 
   int get rowCount;
@@ -70,7 +70,7 @@ abstract base class TableController with ChangeNotifier {
   int get dataCount;
 
   void addRows(
-    List<TableRowData> rows, {
+    List<RowData> rows, {
     bool skipDuplicates = false,
     bool removePlaceholder = true,
   });
@@ -85,13 +85,12 @@ abstract base class TableController with ChangeNotifier {
   void toggleHeaderVisibility(bool alwaysShowHeader);
 
   // Listenable get listenable;
-  List<ColumnId> get orderedColumns;
+  List<ColumnKey> get orderedColumns;
 
   TableSpan buildRowSpan(int index, TableGridBorder border);
   TableSpan buildColumnSpan(int index, TableGridBorder border);
 
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity);
-  Listenable? getCellActionNotifier(ChildVicinity vicinity);
   CellIndex getCellIndex(ChildVicinity vicinity);
 
   int toVicinityRow(int row);
@@ -100,25 +99,17 @@ abstract base class TableController with ChangeNotifier {
 }
 
 final class _TableControllerImpl extends TableController
-    with
-        TableCoordinator,
-        TableActionImplMixin,
-        TableColumnImplMixin,
-        TableDataSourceImplMixin {
+    with TableCoordinator, TableColumnImplMixin, TableDataSourceImplMixin {
   _TableControllerImpl({
-    required List<ColumnId> columns,
+    required List<ColumnKey> columns,
     required TableExtentManager extentManager,
-    List<TableRowData> initialRows = const [],
+    List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
-    List<TableSelectionStrategy> selectionStrategies = const [
-      TableSelectionStrategy.row
-    ],
-    List<TableHoveringStrategy> hoveringStrategies = const [
-      TableHoveringStrategy.row
-    ],
+    List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
+    List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
   })  : _extentManager = extentManager,
         super._() {
-    actionManager = ActionManager(
+    focusManager = TableFocusManager(
       hoveringStrategies: hoveringStrategies,
       selectionStrategies: selectionStrategies,
     )..bindCoordinator(this);
@@ -129,15 +120,12 @@ final class _TableControllerImpl extends TableController
       ..bindCoordinator(this)
       ..add(initialRows);
 
-    columnManager = TableColumnManager()
-      ..bindCoordinator(this)
-      ..setColumns(columns);
+    columnManager = TableColumnManager(columns)..bindCoordinator(this);
 
     _extentManager.bindCoordinator(this);
   }
 
-  @override
-  late final ActionManager actionManager;
+  late final TableFocusManager focusManager;
 
   @override
   late final TableDataSource dataSource;
@@ -163,35 +151,11 @@ final class _TableControllerImpl extends TableController
   }
 
   @override
-  void afterReorder({
-    required int from,
-    required int to,
-    required bool forColumn,
-  }) {
-    actionManager.adapt(
-      from,
-      to,
-      forColumn: forColumn,
-    );
-  }
-
-  @override
-  void afterReindex({
-    Map<int, int>? newRowIndices,
-    Map<int, int>? newColumnIndices,
-  }) {
-    actionManager.reindex(
-      newRowIndices: newRowIndices,
-      newColumnIndices: newColumnIndices,
-    );
-  }
-
-  @override
   void dispose() {
     _extentManager.dispose();
     dataSource.dispose();
     columnManager.dispose();
-    actionManager.dispose();
+    focusManager.dispose();
     super.dispose();
   }
 
@@ -202,40 +166,43 @@ final class _TableControllerImpl extends TableController
 
   @override
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity) {
-    final selected =
-        actionManager.isCellSelected(vicinity.row, vicinity.column);
-    final hovering =
-        actionManager.isCellHovering(vicinity.row, vicinity.column);
-
-    final columnId = orderedColumns[vicinity.column];
+    final columnKey = orderedColumns[vicinity.column];
     final isPinned = vicinity.column < pinnedColumnCount;
 
     if (isColumnHeader(vicinity.row)) {
       return ColumnHeaderDetail(
-        columnId: columnId,
+        columnKey: columnKey,
         column: vicinity.column,
         isPinned: isPinned,
-        selected: selected,
-        hovering: hovering,
+        selected: focusManager.isColumnSelected(columnKey),
+        hovering: focusManager.isColumnHovering(columnKey),
       ) as T;
     }
 
     final cellIndex = getCellIndex(vicinity);
+    final rowData = dataSource.getRowData(cellIndex.row);
 
     return TableCellDetail(
-      columnId: columnId,
       index: cellIndex,
+      columnKey: columnKey,
+      rowKey: rowData.key,
       isPinned: isPinned,
-      selected: selected,
-      hovering: hovering,
-      cellData: dataSource.getCellData(cellIndex.row, columnId),
+      selected: focusManager.isCellSelected(
+        rowData.key,
+        columnKey,
+      ),
+      hovering: focusManager.isCellHovering(
+        rowData.key,
+        columnKey,
+      ),
+      cellData: rowData[columnKey],
     ) as T;
   }
 
   @override
   TableSpan buildColumnSpan(int index, TableGridBorder border) {
-    final columnId = orderedColumns[index];
-    final extent = _extentManager.getColumnExtent(columnId);
+    final columnKey = orderedColumns[index];
+    final extent = _extentManager.getColumnExtent(columnKey);
     return border.build(
       axis: Axis.vertical,
       extent: extent,
@@ -251,5 +218,70 @@ final class _TableControllerImpl extends TableController
       extent: extent,
       last: index == rowCount - 1,
     );
+  }
+
+  @override
+  void updateStrategies({
+    List<FocusStrategy>? selectionStrategies,
+    List<FocusStrategy>? hoveringStrategies,
+  }) {
+    bool shouldNotify = false;
+
+    if (selectionStrategies != null) {
+      shouldNotify |= focusManager.updateSelectionStrategy(selectionStrategies);
+    }
+
+    if (hoveringStrategies != null) {
+      shouldNotify |= focusManager.updateHoveringStrategy(hoveringStrategies);
+    }
+
+    if (shouldNotify) {
+      notifyRebuild();
+    }
+  }
+
+  @override
+  void select({
+    List<RowKey>? rows,
+    List<ColumnKey>? columns,
+    List<CellKey>? cells,
+  }) {
+    focusManager.select(
+      rows: rows,
+      columns: columns,
+      cells: cells,
+    );
+  }
+
+  @override
+  void unselect({
+    List<RowKey>? rows,
+    List<ColumnKey>? columns,
+    List<CellKey>? cells,
+  }) {
+    focusManager.unselect(
+      rows: rows,
+      columns: columns,
+      cells: cells,
+    );
+  }
+
+  @override
+  void hoverOn({RowKey? row, ColumnKey? column}) {
+    focusManager.hoverOn(row: row, column: column);
+  }
+
+  @override
+  void hoverOff({RowKey? row, ColumnKey? column}) {
+    focusManager.hoverOff(row: row, column: column);
+  }
+
+  @override
+  Listenable? getCellFocusNotifier(ChildVicinity vicinity) {
+    if (isColumnHeader(vicinity.row)) {
+      return focusManager.columnFocusNotifier;
+    } else {
+      return focusManager.cellFocusNotifier;
+    }
   }
 }

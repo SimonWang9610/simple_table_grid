@@ -1,20 +1,25 @@
 import 'package:simple_table_grid/simple_table_grid.dart';
+import 'package:simple_table_grid/src/models/key.dart';
 
 final class TableDataSource with TableCoordinatorMixin {
   TableDataSource({
-    List<TableRowData> rows = const [],
+    List<RowData> rows = const [],
     bool alwaysShowHeader = true,
   }) : _alwaysShowHeader = alwaysShowHeader {
     add(rows);
   }
 
-  final _rows = <TableRowData>[];
+  final _nonPinnedRows = <RowData>[];
+  final _pinnedRows = <RowData>[];
 
-  int get dataCount => _rows.length;
+  List<RowData> get orderedRows => [..._pinnedRows, ..._nonPinnedRows];
+
+  int get dataCount => _nonPinnedRows.length + _pinnedRows.length;
 
   int get rowCount => dataCount + (_alwaysShowHeader ? 1 : 0);
 
   bool _alwaysShowHeader;
+
   bool get alwaysShowHeader => _alwaysShowHeader;
 
   set alwaysShowHeader(bool value) {
@@ -23,7 +28,7 @@ final class TableDataSource with TableCoordinatorMixin {
     coordinator.notifyRebuild();
   }
 
-  int _pinnedRowCount = 0;
+  int get _pinnedRowCount => _pinnedRows.length;
 
   int get pinnedRowCount {
     assert(
@@ -33,21 +38,16 @@ final class TableDataSource with TableCoordinatorMixin {
     return alwaysShowHeader ? _pinnedRowCount + 1 : _pinnedRowCount;
   }
 
-  void add(
-    List<TableRowData> rows, {
-    bool skipDuplicates = false,
-  }) {
+  void add(List<RowData> rows) {
     if (rows.isEmpty) return;
 
     assert(
       () {
-        final columns = coordinator.orderedColumns;
+        final columns = coordinator.orderedColumns.toSet();
 
         for (final row in rows) {
-          for (final column in columns) {
-            if (!row.containsKey(column)) {
-              return false;
-            }
+          if (columns.difference(row.columns).isNotEmpty) {
+            return false;
           }
         }
 
@@ -58,13 +58,15 @@ final class TableDataSource with TableCoordinatorMixin {
 
     bool shouldNotify = rows.isNotEmpty;
 
-    if (!skipDuplicates) {
-      _rows.addAll(rows);
-    } else {
-      for (final row in rows) {
-        if (!_rows.contains(row)) {
-          _rows.add(row);
-        }
+    final mapped = _nonPinnedRows.asMap().map(
+          (index, row) => MapEntry(row.key, index),
+        );
+
+    for (final row in rows) {
+      if (!mapped.containsKey(row.key)) {
+        _nonPinnedRows.add(row);
+      } else {
+        _nonPinnedRows[mapped[row.key]!] = row;
       }
     }
 
@@ -73,132 +75,116 @@ final class TableDataSource with TableCoordinatorMixin {
     }
   }
 
+  // void remove(List<RowKey> rows) {
+  //   if (rows.isEmpty) return;
+
+  //   bool shouldNotify = false;
+
+  //   final mappedNonPinned = _nonPinnedRows.asMap().map(
+  //         (index, row) => MapEntry(row.key, index),
+  //       );
+  //   final mappedPinned = _pinnedRows.asMap().map(
+  //         (index, row) => MapEntry(row.key, index),
+  //       );
+
+  //   for (final row in rows) {
+  //     if (mappedNonPinned.containsKey(row)) {
+  //       _nonPinnedRows.removeAt(mappedNonPinned[row]!);
+  //       shouldNotify = true;
+  //     } else if (mappedPinned.containsKey(row)) {
+  //       _pinnedRows.removeAt(mappedPinned[row]!);
+  //       shouldNotify = true;
+  //     }
+  //   }
+
+  //   if (shouldNotify) {
+  //     coordinator.notifyRebuild();
+  //   }
+  // }
+
   void remove(List<int> rows) {
     if (rows.isEmpty) return;
 
-    bool shouldNotify = rows.isNotEmpty;
-
-    final indexMapped = Map<int, dynamic>.from(_rows.asMap());
-    final newIndices = <int, int>{};
-
     for (final row in rows) {
-      if (row < pinnedRowCount) continue;
-
-      /// the index mapped's key is cell row
-      /// which is the index of the actual row data,
-      /// while the given row is vicinity row
-      /// which is the index of the row in the table
-      final dataIndex = toCellRow(row);
-
-      if (indexMapped.containsKey(dataIndex)) {
-        indexMapped.remove(dataIndex);
-        shouldNotify = true;
+      if (row < _pinnedRowCount) {
+        _pinnedRows.removeAt(row);
+      } else {
+        _nonPinnedRows.removeAt(row - _pinnedRowCount);
       }
     }
 
-    final newValues = <TableRowData>[];
-    final oldIndices = indexMapped.keys.toList();
-
-    for (int i = 0; i < oldIndices.length; i++) {
-      final oldDataIndex = oldIndices[i];
-      newValues.add(indexMapped[oldDataIndex]);
-      newIndices[toVicinityRow(oldDataIndex)] = toVicinityRow(i);
-    }
-
-    _rows.clear();
-    _rows.addAll(newValues);
-
-    coordinator.afterReindex(newRowIndices: newIndices);
-
-    if (shouldNotify) {
-      coordinator.notifyRebuild();
-    }
+    coordinator.notifyRebuild();
   }
 
   void reorder(int from, int to) {
     if (from == to) return;
 
-    _reorderWithChecker(
-      from,
-      to,
-      (from, to) {
-        final left = pinnedRowCount - 1;
-
-        return from != to &&
-            (from >= left && from < rowCount) &&
-            (to >= left && to < rowCount);
-      },
+    assert(
+      from >= 0 && from < dataCount,
+      "From index $from is out of bounds for rows of length $dataCount",
     );
+
+    assert(
+      to >= 0 && to < dataCount,
+      "To index $to is out of bounds for rows of length $dataCount",
+    );
+
+    final fromPinned = from < _pinnedRowCount;
+    final toPinned = to < _pinnedRowCount;
+
+    if (fromPinned && toPinned) {
+      final data = _pinnedRows.removeAt(from);
+      _pinnedRows.insert(to, data);
+    } else if (!fromPinned && !toPinned) {
+      final data = _nonPinnedRows.removeAt(from - _pinnedRowCount);
+      _nonPinnedRows.insert(to - _pinnedRowCount, data);
+    } else if (fromPinned && !toPinned) {
+      final data = _pinnedRows.removeAt(from);
+      _nonPinnedRows.insert(to - _pinnedRowCount, data);
+    } else if (!fromPinned && toPinned) {
+      final data = _nonPinnedRows.removeAt(from - _pinnedRowCount);
+      _pinnedRows.insert(to, data);
+    }
+
+    coordinator.notifyRebuild();
   }
 
   void pin(int index) {
-    assert(index >= 0 && index < _rows.length,
-        'Index $index is out of bounds for rows of length ${_rows.length}');
+    if (index < _pinnedRowCount) return;
 
-    if (index < pinnedRowCount) return;
-    _pinnedRowCount++;
+    final data = _nonPinnedRows.removeAt(index - _pinnedRowCount);
 
-    _reorderWithChecker(
-      index,
-      pinnedRowCount - 1,
-      (from, to) => true,
-    );
+    _pinnedRows.add(data);
+    coordinator.notifyRebuild();
   }
 
   void unpin(int index) {
-    assert(index >= 0 && index < _rows.length,
-        'Index $index is out of bounds for rows of length ${_rows.length}');
+    if (index >= _pinnedRowCount) return;
 
-    if (index >= pinnedRowCount) return;
-    _pinnedRowCount--;
+    final data = _pinnedRows.removeAt(index);
 
-    _reorderWithChecker(
-      index,
-      pinnedRowCount - 1,
-      (from, to) => true,
-    );
+    _nonPinnedRows.insert(0, data);
+    coordinator.notifyRebuild();
   }
 
   @override
   void dispose() {
     super.dispose();
-    _rows.clear();
-    _pinnedRowCount = 0;
+    _nonPinnedRows.clear();
+    _pinnedRows.clear();
   }
 
-  dynamic operator [](int index) {
+  RowData getRowData(int index) {
     assert(
       index >= 0 && index < dataCount,
-      "Index $index is out of bounds for rows of length $dataCount",
-    );
-    return _rows[index];
-  }
-
-  dynamic getCellData(int dataIndex, ColumnId columnId) {
-    return _rows[dataIndex][columnId];
-  }
-
-  bool _reorderWithChecker(
-    int from,
-    int to,
-    bool Function(int from, int to) canReorder,
-  ) {
-    if (from == to) return false;
-
-    if (!canReorder(from, to)) return false;
-
-    final row = _rows.removeAt(from);
-    _rows.insert(to, row);
-
-    coordinator.afterReorder(
-      from: from,
-      to: to,
-      forColumn: false,
+      "Data index $index is out of bounds for rows of length $dataCount",
     );
 
-    coordinator.notifyRebuild();
-
-    return true;
+    if (index < _pinnedRowCount) {
+      return _pinnedRows[index];
+    } else {
+      return _nonPinnedRows[index - _pinnedRowCount];
+    }
   }
 
   // Convert a cell row (index of the actual data list)

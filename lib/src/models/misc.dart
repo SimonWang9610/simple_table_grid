@@ -18,10 +18,3 @@ typedef TableCellDetailBuilder<T extends CellDetail> = Widget Function(
   BuildContext context,
   T detail,
 );
-
-typedef TableCellDataExtractor<T> = dynamic Function(
-  T rowData,
-  ColumnId columnId,
-);
-
-typedef TableRowData = Map<ColumnId, dynamic>;

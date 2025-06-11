@@ -1,34 +1,34 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/src/components/column_manager.dart';
 import 'package:simple_table_grid/src/controller.dart';
-import 'package:simple_table_grid/src/models/cell_detail.dart';
+import 'package:simple_table_grid/src/models/key.dart';
 
 base mixin TableColumnImplMixin on TableController {
   @protected
   TableColumnManager get columnManager;
 
   @override
-  void addColumn(ColumnId column, {bool pinned = false}) {
+  void addColumn(ColumnKey column, {bool pinned = false}) {
     columnManager.add(column, pinned: pinned);
   }
 
   @override
-  void removeColumn(ColumnId id) {
+  void removeColumn(ColumnKey id) {
     columnManager.remove(id);
   }
 
   @override
-  void pinColumn(ColumnId id) {
+  void pinColumn(ColumnKey id) {
     columnManager.pin(id);
   }
 
   @override
-  void unpinColumn(ColumnId id) {
+  void unpinColumn(ColumnKey id) {
     columnManager.unpin(id);
   }
 
   @override
-  void reorderColumn(ColumnId id, int to) {
+  void reorderColumn(ColumnKey id, int to) {
     columnManager.reorder(id, to);
   }
 
@@ -39,5 +39,5 @@ base mixin TableColumnImplMixin on TableController {
   int get pinnedColumnCount => columnManager.pinnedColumnCount;
 
   @override
-  List<ColumnId> get orderedColumns => columnManager.orderedColumns;
+  List<ColumnKey> get orderedColumns => columnManager.orderedColumns;
 }

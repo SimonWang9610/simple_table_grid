@@ -1,153 +1,94 @@
-import 'dart:collection';
-
 import 'package:simple_table_grid/src/components/coordinator.dart';
-import 'package:simple_table_grid/src/models/cell_detail.dart';
+import 'package:simple_table_grid/src/models/key.dart';
 
 final class TableColumnManager with TableCoordinatorMixin {
-  TableColumnManager();
-
-  final LinkedHashSet<ColumnId> _columns = LinkedHashSet<ColumnId>();
-
-  List<ColumnId> get orderedColumns => _columns.toList();
-
-  int get columnCount => _columns.length;
-
-  int _pinnedColumnCount = 0;
-
-  int get pinnedColumnCount {
-    assert(
-      _pinnedColumnCount <= columnCount,
-      "Pinned columns $_pinnedColumnCount must be less than or equal to column count $columnCount",
-    );
-    return _pinnedColumnCount;
+  TableColumnManager(List<ColumnKey>? columns) {
+    _nonPinnedColumns.addAll(columns ?? []);
   }
 
-  void reorder(ColumnId id, int to) {
-    _reorderWithChecker(
-      id,
-      to,
-      (from, to) {
-        final left = _pinnedColumnCount - 1;
+  final _nonPinnedColumns = <ColumnKey>[];
+  final _pinnedColumns = <ColumnKey>[];
 
-        // ensure only non-pinned columns [left, columnCount) can be reordered
-        return from != to &&
-            (from >= left && from < columnCount) &&
-            (to >= left && to < columnCount);
-      },
-    );
-  }
+  List<ColumnKey> get orderedColumns => [
+        ..._pinnedColumns,
+        ..._nonPinnedColumns,
+      ];
 
-  void remove(ColumnId id) {
-    if (!_columns.contains(id)) return;
+  int get columnCount => _nonPinnedColumns.length + _pinnedColumns.length;
 
-    int? index;
+  int get pinnedColumnCount => _pinnedColumns.length;
 
-    final newIndices = <int, int>{};
+  void reorder(ColumnKey id, int to) {
+    final index = _pinnedColumns.indexWhere((c) => c == id);
+    final pinned = index != -1;
+    final toPinned = to < pinnedColumnCount;
 
-    for (int i = 0; i < _columns.length; i++) {
-      if (_columns.elementAt(i) == id) {
-        index = i;
-      }
-
-      if (index == null) {
-        newIndices[i] = i;
-      } else if (i > index) {
-        newIndices[i] = i - 1;
-      }
+    if (pinned && toPinned) {
+      _pinnedColumns.removeAt(index);
+      _pinnedColumns.insert(to, id);
+    } else if (!pinned && !toPinned) {
+      _nonPinnedColumns.removeAt(index);
+      _nonPinnedColumns.insert(to - pinnedColumnCount, id);
+    } else if (pinned && !toPinned) {
+      _pinnedColumns.removeAt(index);
+      _nonPinnedColumns.insert(to - pinnedColumnCount, id);
+    } else if (!pinned && toPinned) {
+      _nonPinnedColumns.removeAt(-pinnedColumnCount);
+      _pinnedColumns.insert(to, id);
     }
-
-    _columns.remove(id);
-
-    assert(
-      index != null,
-      "Column $id not found in columns $_columns",
-    );
-
-    if (index! < _pinnedColumnCount) {
-      _pinnedColumnCount--;
-    }
-
-    coordinator.afterReindex(newColumnIndices: newIndices);
 
     coordinator.notifyRebuild();
   }
 
-  void add(ColumnId id, {bool pinned = false}) {
-    if (pinned) {
-      _columns.add(id);
-      pin(id);
+  void remove(ColumnKey key) {
+    final index = orderedColumns.indexWhere((c) => c == key);
+    if (index == -1) return;
+
+    if (index < pinnedColumnCount) {
+      _pinnedColumns.removeAt(index);
     } else {
-      if (!_columns.contains(id)) {
-        _columns.add(id);
-        coordinator.notifyRebuild();
-      }
+      _nonPinnedColumns.removeAt(index - pinnedColumnCount);
     }
-  }
-
-  void pin(ColumnId id) {
-    final index = orderedColumns.indexWhere((c) => c == id);
-    if (index == -1 || index < _pinnedColumnCount) return;
-
-    _pinnedColumnCount++;
-
-    _reorderWithChecker(
-      id,
-      _pinnedColumnCount - 1,
-      (from, to) => true,
-    );
-  }
-
-  void unpin(ColumnId id) {
-    final index = orderedColumns.indexWhere((c) => c == id);
-    if (index == -1 || index >= _pinnedColumnCount) return;
-
-    _pinnedColumnCount--;
-
-    _reorderWithChecker(
-      id,
-      _pinnedColumnCount,
-      (from, to) => true,
-    );
-  }
-
-  void setColumns(List<ColumnId> columns) {
-    _columns.clear();
-    _columns.addAll(columns);
 
     coordinator.notifyRebuild();
   }
 
-  bool _reorderWithChecker(
-    ColumnId id,
-    int to,
-    bool Function(int, int) canReorder,
-  ) {
-    assert(
-      to >= 0 && to < columnCount,
-      "Invalid index $to, must be between 0 and $columnCount",
-    );
+  void add(ColumnKey id, {bool pinned = false}) {
+    if (orderedColumns.contains(id)) {
+      return; // Column already exists
+    }
 
-    final oldOrderedColumns = orderedColumns;
+    if (pinned) {
+      _pinnedColumns.add(id);
+    } else {
+      _nonPinnedColumns.add(id);
+    }
 
-    final from = oldOrderedColumns.indexWhere((c) => c == id);
+    coordinator.notifyRebuild();
+  }
 
-    if (from == -1) return false;
+  void pin(ColumnKey id) {
+    final index = orderedColumns.indexWhere((c) => c == id);
+    if (index == -1 || index < pinnedColumnCount) return;
 
-    if (!canReorder(from, to)) return false;
+    _nonPinnedColumns.removeAt(index - pinnedColumnCount);
+    _pinnedColumns.add(id);
+    coordinator.notifyRebuild();
+  }
 
-    oldOrderedColumns.removeAt(from);
-    oldOrderedColumns.insert(to, id);
+  void unpin(ColumnKey id) {
+    final index = orderedColumns.indexWhere((c) => c == id);
+    if (index == -1 || index >= pinnedColumnCount) return;
 
-    coordinator.afterReorder(from: from, to: to, forColumn: true);
-    setColumns(oldOrderedColumns);
-
-    return true;
+    _pinnedColumns.removeAt(index);
+    _nonPinnedColumns.insert(0, id);
+    coordinator.notifyRebuild();
   }
 
   @override
   void dispose() {
     super.dispose();
-    _columns.clear();
-    _pinnedColumnCount = 0;
+    _nonPinnedColumns.clear();
+    _pinnedColumns.clear();
   }
 }

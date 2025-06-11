@@ -1,5 +1,5 @@
 import 'package:simple_table_grid/src/components/coordinator.dart';
-import 'package:simple_table_grid/src/models/cell_detail.dart';
+import 'package:simple_table_grid/src/models/key.dart';
 import 'package:simple_table_grid/src/models/table_extent.dart';
 
 final class TableExtentManager with TableCoordinatorMixin {
@@ -7,7 +7,7 @@ final class TableExtentManager with TableCoordinatorMixin {
     required TableExtent defaultRowExtent,
     required TableExtent defaultColumnExtent,
     Map<int, TableExtent>? rowExtents,
-    Map<ColumnId, TableExtent>? columnExtents,
+    Map<ColumnKey, TableExtent>? columnExtents,
   })  : _defaultRowExtent = defaultRowExtent,
         _defaultColumnExtent = defaultColumnExtent {
     if (rowExtents != null) {
@@ -20,7 +20,7 @@ final class TableExtentManager with TableCoordinatorMixin {
   }
 
   final Map<int, TableExtent> _mutatedRowExtents = {};
-  final Map<ColumnId, TableExtent> _mutatedColumnExtents = {};
+  final Map<ColumnKey, TableExtent> _mutatedColumnExtents = {};
 
   TableExtent _defaultRowExtent;
   TableExtent _defaultColumnExtent;
@@ -47,7 +47,7 @@ final class TableExtentManager with TableCoordinatorMixin {
     return _defaultRowExtent;
   }
 
-  TableExtent getColumnExtent(ColumnId columnId) {
+  TableExtent getColumnExtent(ColumnKey columnId) {
     if (_mutatedColumnExtents.containsKey(columnId)) {
       return _mutatedColumnExtents[columnId]!;
     }
@@ -62,7 +62,7 @@ final class TableExtentManager with TableCoordinatorMixin {
     coordinator.notifyRebuild();
   }
 
-  void setColumnExtent(ColumnId columnId, TableExtent extent) {
+  void setColumnExtent(ColumnKey columnId, TableExtent extent) {
     if (_mutatedColumnExtents[columnId] == extent) return;
 
     _mutatedColumnExtents[columnId] = extent;
@@ -80,7 +80,7 @@ final class TableExtentManager with TableCoordinatorMixin {
     TableExtent? defaultRowExtent,
     TableExtent? defaultColumnExtent,
     Map<int, TableExtent>? rowExtents,
-    Map<ColumnId, TableExtent>? columnExtents,
+    Map<ColumnKey, TableExtent>? columnExtents,
     bool rebuildImmediately = true,
   }) {
     final newManager = TableExtentManager(
@@ -102,7 +102,7 @@ final class TableExtentManager with TableCoordinatorMixin {
   TableExtent get defaultRowExtent => _defaultRowExtent;
   TableExtent get defaultColumnExtent => _defaultColumnExtent;
 
-  Map<ColumnId, TableExtent> get columnExtents => Map.unmodifiable(
+  Map<ColumnKey, TableExtent> get columnExtents => Map.unmodifiable(
         _mutatedColumnExtents,
       );
 
