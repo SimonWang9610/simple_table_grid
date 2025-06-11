@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/models/key.dart';
 
 base mixin TableDataSourceImplMixin on TableController {
   @protected
@@ -16,32 +15,23 @@ base mixin TableDataSourceImplMixin on TableController {
   }
 
   @override
-  void removeRows(
-    List<int> rows, {
-    bool showPlaceholder = false,
-  }) {
-    dataSource.remove(
-      rows
-          .map(
-            (r) => toVicinityRow(r),
-          )
-          .toList(),
-    );
+  void removeRows(List<RowKey> rows) {
+    dataSource.removeByKeys(rows);
   }
 
   @override
-  void reorderRow(int fromDataIndex, int toDataIndex) {
-    dataSource.reorder(fromDataIndex, toDataIndex);
+  void reorderRow(RowKey from, RowKey to) {
+    dataSource.reorderByKey(from, to);
   }
 
   @override
-  void pinRow(int dataIndex) {
-    dataSource.pin(dataIndex);
+  void pinRow(RowKey key) {
+    dataSource.pinByKey(key);
   }
 
   @override
-  void unpinRow(int dataIndex) {
-    dataSource.unpin(dataIndex);
+  void unpinRow(RowKey key) {
+    dataSource.unpinByKey(key);
   }
 
   @override
@@ -59,28 +49,7 @@ base mixin TableDataSourceImplMixin on TableController {
   int get dataCount => dataSource.dataCount;
 
   @override
-  int toVicinityRow(int row) {
-    assert(
-      row >= 0 && row < dataCount,
-      "Data index $row is out of bounds for rows of length $dataCount",
-    );
-    return dataSource.toVicinityRow(row);
-  }
-
-  @override
-  CellIndex getCellIndex(ChildVicinity vicinity) {
-    final row = dataSource.toCellRow(vicinity.row);
-
-    assert(
-      row >= 0 && row < dataCount,
-      "Row index $row must be greater than or equal to 0",
-    );
-
-    assert(
-      vicinity.column >= 0 && vicinity.column < columnCount,
-      "Column index ${vicinity.column} must be greater than or equal to 0",
-    );
-
-    return CellIndex(row, vicinity.column);
+  RowKey getRowKey(int index) {
+    return dataSource.getRowKey(index);
   }
 }

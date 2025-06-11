@@ -13,23 +13,23 @@ base mixin TableColumnImplMixin on TableController {
   }
 
   @override
-  void removeColumn(ColumnKey id) {
-    columnManager.remove(id);
+  void removeColumn(ColumnKey key) {
+    columnManager.remove(key);
   }
 
   @override
-  void pinColumn(ColumnKey id) {
-    columnManager.pin(id);
+  void pinColumn(ColumnKey key) {
+    columnManager.pin(key);
   }
 
   @override
-  void unpinColumn(ColumnKey id) {
-    columnManager.unpin(id);
+  void unpinColumn(ColumnKey key) {
+    columnManager.unpin(key);
   }
 
   @override
-  void reorderColumn(ColumnKey id, int to) {
-    columnManager.reorder(id, to);
+  void reorderColumn(ColumnKey from, ColumnKey to) {
+    columnManager.reorder(from, to);
   }
 
   @override
@@ -40,4 +40,12 @@ base mixin TableColumnImplMixin on TableController {
 
   @override
   List<ColumnKey> get orderedColumns => columnManager.orderedColumns;
+
+  @override
+  ColumnKey getColumnKey(int index) {
+    if (index < 0 || index >= columnManager.columnCount) {
+      throw RangeError.index(index, columnManager.orderedColumns, 'index');
+    }
+    return columnManager.orderedColumns[index];
+  }
 }

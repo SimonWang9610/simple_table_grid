@@ -8,10 +8,7 @@ import 'package:simple_table_grid/src/data_source.dart';
 import 'package:simple_table_grid/src/impl/column_interface_impl.dart';
 import 'package:simple_table_grid/src/impl/data_source_interface_impl.dart';
 import 'package:simple_table_grid/src/models/cell_detail.dart';
-import 'package:simple_table_grid/src/models/cell_index.dart';
 import 'package:simple_table_grid/src/models/key.dart';
-import 'package:simple_table_grid/src/models/table_grid_border.dart';
-import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
 
 abstract base class TableController with ChangeNotifier {
   TableController._();
@@ -53,47 +50,37 @@ abstract base class TableController with ChangeNotifier {
   void hoverOff({RowKey? row, ColumnKey? column});
   Listenable? getCellFocusNotifier(ChildVicinity vicinity);
 
-  // bool isCellSelected(CellKey key);
-  // bool isCellHovering(CellKey key);
-
   int get columnCount;
   int get pinnedColumnCount;
-  void reorderColumn(ColumnKey id, int to);
+
+  void reorderColumn(ColumnKey from, ColumnKey to);
   void addColumn(ColumnKey column, {bool pinned = false});
-  void removeColumn(ColumnKey id);
-  void pinColumn(ColumnKey id);
-  void unpinColumn(ColumnKey id);
-  bool isColumnHeader(int vicinityRow);
+  void removeColumn(ColumnKey key);
+  void pinColumn(ColumnKey key);
+  void unpinColumn(ColumnKey key);
 
   int get rowCount;
   int get pinnedRowCount;
   int get dataCount;
 
-  void addRows(
-    List<RowData> rows, {
-    bool skipDuplicates = false,
-    bool removePlaceholder = true,
-  });
-  void removeRows(
-    List<int> rows, {
-    bool showPlaceholder = false,
-  });
-  void reorderRow(int fromDataIndex, int toDataIndex);
-  void pinRow(int dataIndex);
-  void unpinRow(int dataIndex);
+  void addRows(List<RowData> rows);
+
+  RowKey getRowKey(int index);
+
+  ColumnKey getColumnKey(int index);
+
+  void removeRows(List<RowKey> rows);
+
+  void reorderRow(RowKey from, RowKey to);
+  void pinRow(RowKey key);
+  void unpinRow(RowKey key);
 
   void toggleHeaderVisibility(bool alwaysShowHeader);
 
   // Listenable get listenable;
   List<ColumnKey> get orderedColumns;
 
-  TableSpan buildRowSpan(int index, TableGridBorder border);
-  TableSpan buildColumnSpan(int index, TableGridBorder border);
-
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity);
-  CellIndex getCellIndex(ChildVicinity vicinity);
-
-  int toVicinityRow(int row);
 
   set extentManager(TableExtentManager value);
 }
@@ -160,64 +147,37 @@ final class _TableControllerImpl extends TableController
   }
 
   @override
-  bool isColumnHeader(int vicinityRow) {
-    return dataSource.alwaysShowHeader ? vicinityRow == 0 : false;
-  }
-
-  @override
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity) {
     final columnKey = orderedColumns[vicinity.column];
-    final isPinned = vicinity.column < pinnedColumnCount;
 
-    if (isColumnHeader(vicinity.row)) {
+    if (dataSource.isColumnHeader(vicinity.row)) {
       return ColumnHeaderDetail(
         columnKey: columnKey,
-        column: vicinity.column,
-        isPinned: isPinned,
+        isPinned: isColumnPinned(vicinity.column),
         selected: focusManager.isColumnSelected(columnKey),
         hovering: focusManager.isColumnHovering(columnKey),
       ) as T;
     }
 
-    final cellIndex = getCellIndex(vicinity);
-    final rowData = dataSource.getRowData(cellIndex.row);
+    final rowKey = dataSource.getRowKey(vicinity.row);
 
     return TableCellDetail(
-      index: cellIndex,
       columnKey: columnKey,
-      rowKey: rowData.key,
-      isPinned: isPinned,
+      rowKey: rowKey,
+      isPinned: isRowPinned(vicinity.row),
       selected: focusManager.isCellSelected(
-        rowData.key,
+        rowKey,
         columnKey,
       ),
       hovering: focusManager.isCellHovering(
-        rowData.key,
+        rowKey,
         columnKey,
       ),
-      cellData: rowData[columnKey],
+      cellData: dataSource.getCellData(
+        rowKey,
+        columnKey,
+      ),
     ) as T;
-  }
-
-  @override
-  TableSpan buildColumnSpan(int index, TableGridBorder border) {
-    final columnKey = orderedColumns[index];
-    final extent = _extentManager.getColumnExtent(columnKey);
-    return border.build(
-      axis: Axis.vertical,
-      extent: extent,
-      last: index == columnCount - 1,
-    );
-  }
-
-  @override
-  TableSpan buildRowSpan(int index, TableGridBorder border) {
-    final extent = _extentManager.getRowExtent(index);
-    return border.build(
-      axis: Axis.horizontal,
-      extent: extent,
-      last: index == rowCount - 1,
-    );
   }
 
   @override
@@ -278,10 +238,18 @@ final class _TableControllerImpl extends TableController
 
   @override
   Listenable? getCellFocusNotifier(ChildVicinity vicinity) {
-    if (isColumnHeader(vicinity.row)) {
+    if (dataSource.isColumnHeader(vicinity.row)) {
       return focusManager.columnFocusNotifier;
     } else {
       return focusManager.cellFocusNotifier;
     }
+  }
+
+  bool isColumnPinned(int vicinityColumn) {
+    return vicinityColumn < pinnedColumnCount;
+  }
+
+  bool isRowPinned(int vicinityRow) {
+    return vicinityRow < pinnedRowCount;
   }
 }

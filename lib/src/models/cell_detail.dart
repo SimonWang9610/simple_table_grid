@@ -1,4 +1,3 @@
-import 'package:simple_table_grid/src/models/cell_index.dart';
 import 'package:simple_table_grid/src/models/key.dart';
 
 sealed class CellDetail {
@@ -39,10 +38,8 @@ sealed class CellDetail {
 }
 
 final class ColumnHeaderDetail extends CellDetail {
-  final int column;
   const ColumnHeaderDetail({
     required super.columnKey,
-    required this.column,
     super.isPinned = false,
     super.selected = false,
     super.hovering = false,
@@ -52,8 +49,7 @@ final class ColumnHeaderDetail extends CellDetail {
   bool operator ==(covariant ColumnHeaderDetail other) {
     if (identical(this, other)) return true;
 
-    return other.column == column &&
-        other.columnKey == columnKey &&
+    return other.columnKey == columnKey &&
         other.isPinned == isPinned &&
         other.selected == selected &&
         other.hovering == hovering;
@@ -61,7 +57,6 @@ final class ColumnHeaderDetail extends CellDetail {
 
   @override
   int get hashCode =>
-      column.hashCode ^
       columnKey.hashCode ^
       isPinned.hashCode ^
       selected.hashCode ^
@@ -69,18 +64,16 @@ final class ColumnHeaderDetail extends CellDetail {
 
   @override
   String toString() {
-    return 'ColumnHeaderDetail(columnKey: $columnKey, column: $column, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
+    return 'ColumnHeaderDetail(columnKey: $columnKey, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
   }
 }
 
 final class TableCellDetail<T> extends CellDetail {
   final RowKey rowKey;
-  final CellIndex index;
   final T? cellData;
 
   const TableCellDetail({
     required super.columnKey,
-    required this.index,
     required this.rowKey,
     this.cellData,
     super.isPinned = false,
@@ -94,7 +87,7 @@ final class TableCellDetail<T> extends CellDetail {
   bool operator ==(covariant TableCellDetail other) {
     if (identical(this, other)) return true;
 
-    return other.index == index &&
+    return other.rowKey == rowKey &&
         other.columnKey == columnKey &&
         other.isPinned == isPinned &&
         other.selected == selected &&
@@ -104,7 +97,7 @@ final class TableCellDetail<T> extends CellDetail {
 
   @override
   int get hashCode {
-    return index.hashCode ^
+    return rowKey.hashCode ^
         columnKey.hashCode ^
         isPinned.hashCode ^
         selected.hashCode ^
@@ -114,6 +107,6 @@ final class TableCellDetail<T> extends CellDetail {
 
   @override
   String toString() {
-    return 'TableCellDetail(columnKey: $columnKey, index: $index, cellData: $cellData, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
+    return 'TableCellDetail(columnKey: $columnKey, rowKey: $rowKey, cellData: $cellData, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
   }
 }

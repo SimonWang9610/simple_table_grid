@@ -1,4 +1,4 @@
-import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
+import 'package:simple_table_grid/src/models/span.dart';
 
 sealed class TableExtent {
   const TableExtent();

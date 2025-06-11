@@ -1,94 +1,90 @@
 import 'package:simple_table_grid/src/components/coordinator.dart';
+import 'package:simple_table_grid/src/components/key_ordering.dart';
 import 'package:simple_table_grid/src/models/key.dart';
 
 final class TableColumnManager with TableCoordinatorMixin {
   TableColumnManager(List<ColumnKey>? columns) {
-    _nonPinnedColumns.addAll(columns ?? []);
+    _nonPinnedOrdering = KeyOrdering.efficient(columns ?? <ColumnKey>[]);
   }
 
-  final _nonPinnedColumns = <ColumnKey>[];
-  final _pinnedColumns = <ColumnKey>[];
+  final _pinnedOrdering = KeyOrdering.efficient(<ColumnKey>[]);
+  late final KeyOrdering<ColumnKey> _nonPinnedOrdering;
 
   List<ColumnKey> get orderedColumns => [
-        ..._pinnedColumns,
-        ..._nonPinnedColumns,
+        ..._pinnedOrdering.keys,
+        ..._nonPinnedOrdering.keys,
       ];
 
-  int get columnCount => _nonPinnedColumns.length + _pinnedColumns.length;
+  int get columnCount => _pinnedOrdering.length + _nonPinnedOrdering.length;
 
-  int get pinnedColumnCount => _pinnedColumns.length;
+  int get pinnedColumnCount => _pinnedOrdering.length;
 
-  void reorder(ColumnKey id, int to) {
-    final index = _pinnedColumns.indexWhere((c) => c == id);
-    final pinned = index != -1;
-    final toPinned = to < pinnedColumnCount;
+  void reorder(ColumnKey from, ColumnKey to) {
+    final fromPinned = _pinnedOrdering.contains(from);
+    final toPinned = _pinnedOrdering.contains(to);
 
-    if (pinned && toPinned) {
-      _pinnedColumns.removeAt(index);
-      _pinnedColumns.insert(to, id);
-    } else if (!pinned && !toPinned) {
-      _nonPinnedColumns.removeAt(index);
-      _nonPinnedColumns.insert(to - pinnedColumnCount, id);
-    } else if (pinned && !toPinned) {
-      _pinnedColumns.removeAt(index);
-      _nonPinnedColumns.insert(to - pinnedColumnCount, id);
-    } else if (!pinned && toPinned) {
-      _nonPinnedColumns.removeAt(-pinnedColumnCount);
-      _pinnedColumns.insert(to, id);
+    if (fromPinned && toPinned) {
+      _pinnedOrdering.reorder(from, to);
+    } else if (!fromPinned && !toPinned) {
+      _nonPinnedOrdering.reorder(from, to);
+    } else if (fromPinned && !toPinned) {
+      _pinnedOrdering.remove(from);
+      _nonPinnedOrdering.add(to);
+    } else if (!fromPinned && toPinned) {
+      _nonPinnedOrdering.remove(from);
+      _pinnedOrdering.add(to);
     }
 
     coordinator.notifyRebuild();
   }
 
   void remove(ColumnKey key) {
-    final index = orderedColumns.indexWhere((c) => c == key);
-    if (index == -1) return;
-
-    if (index < pinnedColumnCount) {
-      _pinnedColumns.removeAt(index);
-    } else {
-      _nonPinnedColumns.removeAt(index - pinnedColumnCount);
+    if (!_pinnedOrdering.contains(key) && !_nonPinnedOrdering.contains(key)) {
+      return; // Key not found, nothing to remove
     }
+
+    _pinnedOrdering.remove(key);
+    _nonPinnedOrdering.remove(key);
 
     coordinator.notifyRebuild();
   }
 
-  void add(ColumnKey id, {bool pinned = false}) {
-    if (orderedColumns.contains(id)) {
-      return; // Column already exists
+  void add(ColumnKey key, {bool pinned = false}) {
+    if (_pinnedOrdering.contains(key) || _nonPinnedOrdering.contains(key)) {
+      return;
     }
 
     if (pinned) {
-      _pinnedColumns.add(id);
+      _pinnedOrdering.add(key);
     } else {
-      _nonPinnedColumns.add(id);
+      _nonPinnedOrdering.add(key);
     }
 
     coordinator.notifyRebuild();
   }
 
-  void pin(ColumnKey id) {
-    final index = orderedColumns.indexWhere((c) => c == id);
-    if (index == -1 || index < pinnedColumnCount) return;
+  void pin(ColumnKey key) {
+    if (_pinnedOrdering.contains(key)) return;
 
-    _nonPinnedColumns.removeAt(index - pinnedColumnCount);
-    _pinnedColumns.add(id);
+    _nonPinnedOrdering.remove(key);
+    _pinnedOrdering.add(key);
+
     coordinator.notifyRebuild();
   }
 
-  void unpin(ColumnKey id) {
-    final index = orderedColumns.indexWhere((c) => c == id);
-    if (index == -1 || index >= pinnedColumnCount) return;
+  void unpin(ColumnKey key) {
+    if (_nonPinnedOrdering.contains(key)) return;
 
-    _pinnedColumns.removeAt(index);
-    _nonPinnedColumns.insert(0, id);
+    _pinnedOrdering.remove(key);
+    _nonPinnedOrdering.insert(0, key);
+
     coordinator.notifyRebuild();
   }
 
   @override
   void dispose() {
     super.dispose();
-    _nonPinnedColumns.clear();
-    _pinnedColumns.clear();
+    _pinnedOrdering.reset();
+    _nonPinnedOrdering.reset();
   }
 }

@@ -26,13 +26,17 @@ class _MyAppState extends State<MyApp> {
   );
 
   late final _controller = TableController(
-    columns: ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
+    columns: ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+        .map(
+          (e) => ColumnKey(e),
+        )
+        .toList(),
     extentManager: _extentManager,
     hoveringStrategies: [
-      TableHoveringStrategy.row,
+      FocusStrategy.row,
     ],
     selectionStrategies: [
-      TableSelectionStrategy.cell,
+      FocusStrategy.row,
     ],
   );
 
@@ -77,13 +81,13 @@ class _MyAppState extends State<MyApp> {
         IconButton(
           icon: const Icon(Icons.add),
           onPressed: () {
-            _addRows(1);
+            _addRows(1000);
           },
         ),
         TextButton(
           onPressed: () {
             _controller.removeRows(
-              [0],
+              [_controller.getRowKey(1)],
             );
           },
           child: Text("Remove first row"),
@@ -102,9 +106,9 @@ class _MyAppState extends State<MyApp> {
     return InkWell(
       onTap: () {
         if (detail.isPinned) {
-          _controller.unpinColumn(detail.columnId);
+          _controller.unpinColumn(detail.columnKey);
         } else {
-          _controller.pinColumn(detail.columnId);
+          _controller.pinColumn(detail.columnKey);
         }
       },
       child: Container(
@@ -113,7 +117,7 @@ class _MyAppState extends State<MyApp> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              detail.columnId,
+              detail.columnKey.id,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -136,16 +140,23 @@ class _MyAppState extends State<MyApp> {
     return InkWell(
       onTap: () {
         if (!detail.selected) {
-          _controller.select(cells: [detail.index]);
+          _controller.select(rows: [detail.rowKey]);
         } else {
-          _controller.unselect(cells: [detail.index]);
+          _controller.unselect(rows: [detail.rowKey]);
+        }
+      },
+      onLongPress: () {
+        if (detail.isPinned) {
+          _controller.unpinRow(detail.rowKey);
+        } else {
+          _controller.pinRow(detail.rowKey);
         }
       },
       onHover: (value) {
         if (value) {
-          _controller.hoverOn(row: detail.index.row);
+          _controller.hoverOn(row: detail.rowKey);
         } else {
-          _controller.hoverOff(row: detail.index.row);
+          _controller.hoverOff(row: detail.rowKey);
         }
       },
       child: Container(
@@ -160,7 +171,7 @@ class _MyAppState extends State<MyApp> {
         ),
         child: Center(
           child: Text(
-            "$name, ${detail.columnId}",
+            "$name, ${detail.columnKey.id}",
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -176,36 +187,37 @@ class _MyAppState extends State<MyApp> {
 
     final rows = List.generate(
       count,
-      (index) => {
-        for (final column in columns)
-          column: 'Row ${_controller.dataCount + index}',
-      },
+      (index) => RowData(
+        RowKey(UniqueKey()),
+        {
+          for (final column in columns)
+            column: 'Row ${_controller.dataCount + index}',
+        },
+      ),
     );
 
-    _controller.addRows(
-      rows,
-      skipDuplicates: true,
-      removePlaceholder: true,
-    );
+    _controller.addRows(rows);
   }
 
   void _randomRemove(bool row, bool column) {
     final rnd = Random();
 
-    final nextRow = rnd.nextInt(_controller.dataCount) +
-        _controller.rowCount -
-        _controller.dataCount;
+    final nextRow = rnd.nextInt(_controller.dataCount) + 1;
+    print("Next row: $nextRow");
 
     final nextColumn = rnd.nextInt(_controller.columnCount);
 
+    final rowKey = _controller.getRowKey(nextRow);
+    final columnKey = _controller.getColumnKey(nextColumn);
+
     if (row) {
-      _controller.removeRows([nextRow]);
+      print("Removing row: $rowKey");
+      _controller.removeRows([rowKey]);
     }
 
     if (column) {
-      _controller.removeColumn(
-        _controller.orderedColumns[nextColumn],
-      );
+      print("Removing column: $columnKey");
+      _controller.removeColumn(columnKey);
     }
   }
 }

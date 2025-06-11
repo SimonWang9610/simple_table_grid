@@ -31,9 +31,6 @@ class TableGrid extends StatelessWidget {
       child: ListenableBuilder(
         listenable: controller,
         builder: (_, __) {
-          print(
-              "pinnedColumnCount: ${controller.pinnedColumnCount}, pinnedRowCount: ${controller.pinnedRowCount}");
-
           return TableGridView.builder(
             mainAxis: Axis.horizontal,
             horizontalDetails: ScrollableDetails.horizontal(
@@ -53,7 +50,7 @@ class TableGrid extends StatelessWidget {
             },
             columnExtentBuilder: (index) => Extent.fixed(100),
             builder: (_, vicinity) {
-              final listenable = controller.getCellActionNotifier(vicinity);
+              final listenable = controller.getCellFocusNotifier(vicinity);
 
               return listenable == null
                   ? _buildCellChild(context, vicinity)
