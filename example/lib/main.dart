@@ -81,7 +81,7 @@ class _MyAppState extends State<MyApp> {
         IconButton(
           icon: const Icon(Icons.add),
           onPressed: () {
-            _addRows(1000);
+            _addRows(10);
           },
         ),
         TextButton(
