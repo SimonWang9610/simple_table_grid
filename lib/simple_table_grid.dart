@@ -19,3 +19,4 @@ export "custom_render/render.dart";
 export "custom_render/table_grid_view.dart";
 export "custom_render/layout_extent_delegate.dart";
 export "custom_render/widget.dart";
+export 'custom_render/table_grid_border.dart';

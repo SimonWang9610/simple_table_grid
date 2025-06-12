@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:simple_table_grid/custom_render/column_header_widget.dart';
+import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/custom_render/header_widget.dart';
+import 'package:simple_table_grid/custom_render/cell_widget.dart';
+
 import 'package:simple_table_grid/simple_table_grid.dart';
 
 class TableGrid extends StatelessWidget {
@@ -8,13 +10,16 @@ class TableGrid extends StatelessWidget {
   final ScrollController? verticalScrollController;
   final ScrollPhysics? horizontalScrollPhysics;
   final ScrollPhysics? verticalScrollPhysics;
-  final TableCellDetailBuilder<TableCellDetail> cellBuilder;
-  final TableCellDetailBuilder<ColumnHeaderDetail> columnBuilder;
+  final TableCellDetailBuilder<TableCellDetail> builder;
+  final TableCellDetailBuilder<ColumnHeaderDetail> headerBuilder;
+  final TableGridBorder border;
+
   const TableGrid({
     super.key,
     required this.controller,
-    required this.cellBuilder,
-    required this.columnBuilder,
+    required this.builder,
+    required this.headerBuilder,
+    required this.border,
     this.horizontalScrollController,
     this.horizontalScrollPhysics,
     this.verticalScrollController,
@@ -44,31 +49,56 @@ class TableGrid extends StatelessWidget {
             return Extent.fixed(60);
           },
           columnExtentBuilder: (index) => Extent.fixed(100),
-          builder: (_, vicinity) => CellWidget(
-            vicinity: vicinity,
-            builder: cellBuilder,
-            headerBuilder: columnBuilder,
-            controller: controller,
-          ),
+          builder: (_, vicinity) {
+            final listenable = controller.getCellFocusNotifier(vicinity);
+            return listenable == null
+                ? _buildCell(context, vicinity)
+                : ListenableBuilder(
+                    listenable: listenable,
+                    builder: (ctx, _) => _buildCell(ctx, vicinity),
+                  );
+          },
         );
       },
     );
   }
 
-  // Widget _buildCellChild(BuildContext context, ChildVicinity vicinity) {
-  //   final detail = controller.getCellDetail(vicinity);
+  Widget _buildCell(
+    BuildContext context,
+    ChildVicinity vicinity,
+  ) {
+    final rightEdge = _isRightEdge(vicinity.column);
+    final bottomEdge = _isBottomEdge(vicinity.row);
 
-  //   final (key, child) = switch (detail) {
-  //     ColumnHeaderDetail() => (
-  //         detail.columnKey,
-  //         columnBuilder(context, detail)
-  //       ),
-  //     TableCellDetail() => (detail.cellKey, cellBuilder(context, detail)),
-  //   };
+    final cellBorder = border.calculateBorder(rightEdge, bottomEdge);
+    final padding = border.calculatePadding(rightEdge, bottomEdge);
 
-  //   return KeyedSubtree(
-  //     key: ValueKey(key),
-  //     child: child,
-  //   );
-  // }
+    final detail = controller.getCellDetail(vicinity);
+
+    return switch (detail) {
+      ColumnHeaderDetail() => HeaderWidget(
+          isMiddleHeader: !rightEdge && vicinity.column > 0,
+          border: cellBorder,
+          padding: padding,
+          detail: detail,
+          builder: headerBuilder,
+        ),
+      TableCellDetail() => CellWidget(
+          border: cellBorder,
+          padding: padding,
+          detail: detail,
+          builder: builder,
+        ),
+    };
+  }
+
+  bool _isBottomEdge(int row) {
+    return row == controller.pinnedRowCount - 1 ||
+        row == controller.rowCount - 1;
+  }
+
+  bool _isRightEdge(int column) {
+    return column == controller.columnCount - 1 ||
+        column == controller.pinnedColumnCount - 1;
+  }
 }

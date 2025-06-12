@@ -57,8 +57,18 @@ class _MyAppState extends State<MyApp> {
         padding: const EdgeInsets.all(8.0),
         child: TableGrid(
           controller: _controller,
-          cellBuilder: _buildCell,
-          columnBuilder: _buildColumn,
+          border: TableGridBorder(
+            vertical: BorderSide(
+              color: Colors.red,
+              width: 1,
+            ),
+            horizontal: BorderSide(
+              color: Colors.black,
+              width: 1,
+            ),
+          ),
+          builder: _buildCell,
+          headerBuilder: _buildColumn,
           // border: TableGridBorder(
           //     // vertical: BorderSide(
           //     //   color: Colors.red,
@@ -103,6 +113,25 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget _buildColumn(BuildContext ctx, ColumnHeaderDetail detail) {
+    return Container(
+      color: detail.isPinned ? Colors.blue : Colors.yellow,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            detail.columnKey.id,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Icon(
+            detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+          ),
+        ],
+      ),
+    );
+
     return InkWell(
       onTap: () {
         if (detail.isPinned) {
