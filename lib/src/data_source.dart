@@ -225,6 +225,59 @@ final class TableDataSource with TableCoordinatorMixin {
     _pinnedOrdering.reset();
   }
 
+  RowKey? previousRow(RowKey key) {
+    assert(
+      _rows.containsKey(key),
+      "Row key $key is not in the data source",
+    );
+
+    final pinnedIndex = _pinnedOrdering.indexOf(key);
+
+    if (pinnedIndex != null) {
+      return _pinnedOrdering.firstKey != key
+          ? _pinnedOrdering[pinnedIndex - 1]
+          : null;
+    }
+
+    final nonPinnedIndex = _nonPinnedOrdering.indexOf(key);
+    if (nonPinnedIndex != null) {
+      if (_nonPinnedOrdering.firstKey == key) {
+        return _pinnedOrdering.lastKey;
+      } else {
+        return _nonPinnedOrdering[nonPinnedIndex - 1];
+      }
+    }
+
+    return null; // Key not found in either ordering
+  }
+
+  RowKey? nextRow(RowKey key) {
+    assert(
+      _rows.containsKey(key),
+      "Row key $key is not in the data source",
+    );
+
+    final pinnedIndex = _pinnedOrdering.indexOf(key);
+
+    if (pinnedIndex != null) {
+      return _pinnedOrdering.lastKey != key
+          ? _pinnedOrdering[pinnedIndex + 1]
+          : _nonPinnedOrdering.firstKey;
+    }
+
+    final nonPinnedIndex = _nonPinnedOrdering.indexOf(key);
+
+    if (nonPinnedIndex != null) {
+      if (_nonPinnedOrdering.lastKey != key) {
+        return _nonPinnedOrdering[nonPinnedIndex + 1];
+      } else {
+        return null;
+      }
+    }
+
+    return null; // Key not found in either ordering
+  }
+
   RowKey getRowKey(int index) {
     final dateIndex = toCellRow(index);
 
@@ -261,6 +314,10 @@ final class TableDataSource with TableCoordinatorMixin {
   /// This method adjusts the row index to account for the header row.
   int toCellRow(int row) {
     return alwaysShowHeader ? row - 1 : row;
+  }
+
+  int toVicinityRow(int cellRow) {
+    return alwaysShowHeader ? cellRow + 1 : cellRow;
   }
 
   bool isColumnHeader(int vicinityRow) {

@@ -52,4 +52,14 @@ base mixin TableDataSourceImplMixin on TableController {
   RowKey getRowKey(int index) {
     return dataSource.getRowKey(index);
   }
+
+  @override
+  RowKey? previousRow(RowKey key) {
+    return dataSource.previousRow(key);
+  }
+
+  @override
+  RowKey? nextRow(RowKey key) {
+    return dataSource.nextRow(key);
+  }
 }

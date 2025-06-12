@@ -19,6 +19,48 @@ final class TableColumnManager with TableCoordinatorMixin {
 
   int get pinnedColumnCount => _pinnedOrdering.length;
 
+  ColumnKey? previousColumn(ColumnKey key) {
+    final pinnedIndex = _pinnedOrdering.indexOf(key);
+    final nonPinnedIndex = _nonPinnedOrdering.indexOf(key);
+
+    if (pinnedIndex != null) {
+      return _pinnedOrdering.firstKey != key
+          ? _pinnedOrdering[pinnedIndex - 1]
+          : null;
+    }
+
+    if (nonPinnedIndex != null) {
+      if (_nonPinnedOrdering.firstKey == key) {
+        return _pinnedOrdering.lastKey;
+      } else {
+        return _nonPinnedOrdering[nonPinnedIndex - 1];
+      }
+    }
+
+    return null; // Key not found in either ordering
+  }
+
+  ColumnKey? nextColumn(ColumnKey key) {
+    final pinnedIndex = _pinnedOrdering.indexOf(key);
+    final nonPinnedIndex = _nonPinnedOrdering.indexOf(key);
+
+    if (pinnedIndex != null) {
+      return _pinnedOrdering.lastKey != key
+          ? _pinnedOrdering[pinnedIndex + 1]
+          : _nonPinnedOrdering.firstKey;
+    }
+
+    if (nonPinnedIndex != null) {
+      if (_nonPinnedOrdering.lastKey != key) {
+        return _nonPinnedOrdering[nonPinnedIndex + 1];
+      } else {
+        return null;
+      }
+    }
+
+    return null; // Key not found in either ordering
+  }
+
   void reorder(ColumnKey from, ColumnKey to) {
     final fromPinned = _pinnedOrdering.contains(from);
     final toPinned = _pinnedOrdering.contains(to);

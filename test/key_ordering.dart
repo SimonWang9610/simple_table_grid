@@ -37,6 +37,8 @@ void main() {
     quick.insert(1, ColumnKey("Z"));
     expect(quick.keys,
         equals([keys[1], ColumnKey("Z"), keys[3], keys[0], keys[4]]));
+
+    expect(quick.indexOf(ColumnKey("Z")), equals(1));
   });
 
   test("EfficientOrdering basic operations", () {
@@ -62,5 +64,7 @@ void main() {
     efficient.insert(1, ColumnKey("Z"));
     expect(efficient.keys,
         equals([keys[1], ColumnKey("Z"), keys[3], keys[0], keys[4]]));
+
+    expect(quick.indexOf(ColumnKey("Z")), equals(1));
   });
 }

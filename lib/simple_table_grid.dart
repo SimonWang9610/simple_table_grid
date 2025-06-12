@@ -6,7 +6,6 @@ export 'src/controller.dart';
 export 'src/models/cell_detail.dart';
 export 'src/models/misc.dart';
 export '/src/models/key.dart';
-export "src/models/table_extent.dart";
 export 'src/components/coordinator.dart';
 export 'src/components/column_manager.dart';
 export 'src/components/extent_manager.dart';

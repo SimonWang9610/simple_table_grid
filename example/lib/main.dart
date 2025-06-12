@@ -20,9 +20,9 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final _extentManager = TableExtentManager(
-    defaultColumnExtent: TableExtent.fixed(150),
-    defaultRowExtent: TableExtent.fixed(50),
+  final extentManager = ExtentManager(
+    defaultRowExtent: Extent.fixed(60),
+    defaultColumnExtent: Extent.range(pixels: 100, min: 60),
   );
 
   late final _controller = TableController(
@@ -31,7 +31,6 @@ class _MyAppState extends State<MyApp> {
           (e) => ColumnKey(e),
         )
         .toList(),
-    extentManager: _extentManager,
     hoveringStrategies: [
       FocusStrategy.row,
     ],
@@ -42,7 +41,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    _extentManager.dispose();
+    extentManager.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -57,6 +56,7 @@ class _MyAppState extends State<MyApp> {
         padding: const EdgeInsets.all(8.0),
         child: TableGrid(
           controller: _controller,
+          extentManager: extentManager,
           border: TableGridBorder(
             vertical: BorderSide(
               color: Colors.red,
@@ -125,8 +125,17 @@ class _MyAppState extends State<MyApp> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          Icon(
-            detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+          IconButton(
+            onPressed: () {
+              if (detail.isPinned) {
+                _controller.unpinColumn(detail.columnKey);
+              } else {
+                _controller.pinColumn(detail.columnKey);
+              }
+            },
+            icon: Icon(
+              detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            ),
           ),
         ],
       ),

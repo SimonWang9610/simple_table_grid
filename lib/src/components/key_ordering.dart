@@ -8,6 +8,8 @@ abstract class KeyOrdering<T extends TableKey> {
   void reset();
   bool contains(T key);
 
+  int? indexOf(T key);
+
   T? operator [](int index);
 
   List<T> get keys;
@@ -37,6 +39,18 @@ class QuickOrdering<T extends TableKey> extends KeyOrdering<T> {
       _keyOrdering[key] = i;
       _indexOrdering[i] = key;
     }
+  }
+
+  @override
+  int? indexOf(T key) {
+    if (!_keyOrdering.containsKey(key)) return null;
+
+    final index = _keyOrdering[key];
+    assert(
+      index != null && _indexOrdering[index] == key,
+      "Key $key at index $index does not match the ordering",
+    );
+    return index;
   }
 
   @override
@@ -223,6 +237,18 @@ class EfficientOrdering<T extends TableKey> extends KeyOrdering<T> {
 
   EfficientOrdering(List<T> keys) {
     _keys.addAll(keys);
+  }
+
+  @override
+  int? indexOf(T key) {
+    final index = _keys.indexOf(key);
+    if (index == -1) return null;
+
+    assert(
+      _keys[index] == key,
+      "Key at index $index does not match the provided key",
+    );
+    return index;
   }
 
   @override

@@ -1,21 +1,13 @@
 import 'package:flutter/widgets.dart';
-import 'package:simple_table_grid/custom_render/table_grid_view.dart';
-import 'package:simple_table_grid/src/components/column_manager.dart';
-import 'package:simple_table_grid/src/components/coordinator.dart';
-import 'package:simple_table_grid/src/components/extent_manager.dart';
-import 'package:simple_table_grid/src/components/focus_manager.dart';
-import 'package:simple_table_grid/src/data_source.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/impl/column_interface_impl.dart';
 import 'package:simple_table_grid/src/impl/data_source_interface_impl.dart';
-import 'package:simple_table_grid/src/models/cell_detail.dart';
-import 'package:simple_table_grid/src/models/key.dart';
 
 abstract base class TableController with ChangeNotifier {
   TableController._();
 
   factory TableController({
     required List<ColumnKey> columns,
-    required TableExtentManager extentManager,
     List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
@@ -23,7 +15,6 @@ abstract base class TableController with ChangeNotifier {
   }) =>
       _TableControllerImpl(
         columns: columns,
-        extentManager: extentManager,
         initialRows: initialRows,
         alwaysShowHeader: alwaysShowHeader,
         selectionStrategies: selectionStrategies,
@@ -66,8 +57,12 @@ abstract base class TableController with ChangeNotifier {
   void addRows(List<RowData> rows);
 
   RowKey getRowKey(int index);
+  RowKey? previousRow(RowKey key);
+  RowKey? nextRow(RowKey key);
 
   ColumnKey getColumnKey(int index);
+  ColumnKey? previousColumn(ColumnKey key);
+  ColumnKey? nextColumn(ColumnKey key);
 
   void removeRows(List<RowKey> rows);
 
@@ -81,21 +76,17 @@ abstract base class TableController with ChangeNotifier {
   List<ColumnKey> get orderedColumns;
 
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity);
-
-  set extentManager(TableExtentManager value);
 }
 
 final class _TableControllerImpl extends TableController
     with TableCoordinator, TableColumnImplMixin, TableDataSourceImplMixin {
   _TableControllerImpl({
     required List<ColumnKey> columns,
-    required TableExtentManager extentManager,
     List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
-  })  : _extentManager = extentManager,
-        super._() {
+  }) : super._() {
     focusManager = TableFocusManager(
       hoveringStrategies: hoveringStrategies,
       selectionStrategies: selectionStrategies,
@@ -108,8 +99,6 @@ final class _TableControllerImpl extends TableController
       ..add(initialRows);
 
     columnManager = TableColumnManager(columns)..bindCoordinator(this);
-
-    _extentManager.bindCoordinator(this);
   }
 
   late final TableFocusManager focusManager;
@@ -120,17 +109,6 @@ final class _TableControllerImpl extends TableController
   @override
   late final TableColumnManager columnManager;
 
-  TableExtentManager _extentManager;
-
-  @override
-  set extentManager(TableExtentManager value) {
-    if (_extentManager == value) return;
-    _extentManager.dispose();
-    _extentManager = value;
-    _extentManager.bindCoordinator(this);
-    notifyRebuild();
-  }
-
   @override
   @protected
   void notifyRebuild() {
@@ -139,7 +117,6 @@ final class _TableControllerImpl extends TableController
 
   @override
   void dispose() {
-    _extentManager.dispose();
     dataSource.dispose();
     columnManager.dispose();
     focusManager.dispose();

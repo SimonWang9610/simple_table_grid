@@ -48,4 +48,14 @@ base mixin TableColumnImplMixin on TableController {
     }
     return columnManager.orderedColumns[index];
   }
+
+  @override
+  ColumnKey? previousColumn(ColumnKey key) {
+    return columnManager.previousColumn(key);
+  }
+
+  @override
+  ColumnKey? nextColumn(ColumnKey key) {
+    return columnManager.nextColumn(key);
+  }
 }

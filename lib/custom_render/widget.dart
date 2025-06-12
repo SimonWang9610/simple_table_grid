@@ -6,6 +6,7 @@ import 'package:simple_table_grid/simple_table_grid.dart';
 
 class TableGrid extends StatelessWidget {
   final TableController controller;
+  final ExtentManager extentManager;
   final ScrollController? horizontalScrollController;
   final ScrollController? verticalScrollController;
   final ScrollPhysics? horizontalScrollPhysics;
@@ -13,10 +14,13 @@ class TableGrid extends StatelessWidget {
   final TableCellDetailBuilder<TableCellDetail> builder;
   final TableCellDetailBuilder<ColumnHeaderDetail> headerBuilder;
   final TableGridBorder border;
+  final bool resizeColumn;
+  final bool resizeRow;
 
   const TableGrid({
     super.key,
     required this.controller,
+    required this.extentManager,
     required this.builder,
     required this.headerBuilder,
     required this.border,
@@ -24,12 +28,14 @@ class TableGrid extends StatelessWidget {
     this.horizontalScrollPhysics,
     this.verticalScrollController,
     this.verticalScrollPhysics,
+    this.resizeColumn = true,
+    this.resizeRow = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: controller,
+      listenable: Listenable.merge([controller, extentManager]),
       builder: (_, __) {
         return TableGridView.builder(
           mainAxis: Axis.horizontal,
@@ -46,9 +52,12 @@ class TableGrid extends StatelessWidget {
           pinnedColumnCount: controller.pinnedColumnCount,
           pinnedRowCount: controller.pinnedRowCount,
           rowExtentBuilder: (index) {
-            return Extent.fixed(60);
+            return extentManager.getRowExtent(index);
           },
-          columnExtentBuilder: (index) => Extent.fixed(100),
+          columnExtentBuilder: (index) {
+            final key = controller.getColumnKey(index);
+            return extentManager.getColumnExtent(key);
+          },
           builder: (_, vicinity) {
             final listenable = controller.getCellFocusNotifier(vicinity);
             return listenable == null
@@ -77,11 +86,13 @@ class TableGrid extends StatelessWidget {
 
     return switch (detail) {
       ColumnHeaderDetail() => HeaderWidget(
-          isMiddleHeader: !rightEdge && vicinity.column > 0,
+          isMiddleHeader: vicinity.column > 0 &&
+              vicinity.column < controller.columnCount - 1,
           border: cellBorder,
           padding: padding,
           detail: detail,
           builder: headerBuilder,
+          onResize: resizeColumn ? _resizeColumn : null,
         ),
       TableCellDetail() => CellWidget(
           border: cellBorder,
@@ -90,6 +101,23 @@ class TableGrid extends StatelessWidget {
           builder: builder,
         ),
     };
+  }
+
+  void _resizeColumn(
+    ColumnKey columnKey,
+    ResizeDirection direction,
+    double delta,
+    bool isEnd,
+  ) {
+    if (direction == ResizeDirection.right) {
+      extentManager.updateColumnDelta(columnKey, delta);
+    } else if (direction == ResizeDirection.left) {
+      final previous = controller.previousColumn(columnKey);
+      if (previous == null) {
+        return;
+      }
+      extentManager.updateColumnDelta(previous, delta);
+    }
   }
 
   bool _isBottomEdge(int row) {

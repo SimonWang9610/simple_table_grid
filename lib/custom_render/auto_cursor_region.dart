@@ -3,19 +3,22 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 typedef MouseCursorCallback = MouseCursor Function(Offset? relativeOffset);
+typedef PointerMoveCallback = void Function(Offset pointerPosition, bool isEnd);
 
 class AutoCursorWidget extends SingleChildRenderObjectWidget {
-  final MouseCursorCallback? onPointerCallback;
+  final MouseCursorCallback? onHover;
+  final PointerMoveCallback? onMove;
 
   const AutoCursorWidget({
     super.key,
     required super.child,
-    this.onPointerCallback,
+    this.onHover,
+    this.onMove,
   });
 
   @override
   RenderAutoCursorObject createRenderObject(BuildContext context) {
-    return RenderAutoCursorObject(onPointerCallback: onPointerCallback);
+    return RenderAutoCursorObject(onMove: onMove, onHover: onHover);
   }
 
   @override
@@ -23,19 +26,23 @@ class AutoCursorWidget extends SingleChildRenderObjectWidget {
     BuildContext context,
     covariant RenderAutoCursorObject renderObject,
   ) {
-    renderObject.onPointerCallback = onPointerCallback;
+    renderObject
+      ..onMove = onMove
+      ..onHover = onHover;
   }
 }
 
 class RenderAutoCursorObject extends RenderProxyBoxWithHitTestBehavior
     implements MouseTrackerAnnotation {
   RenderAutoCursorObject({
-    required MouseCursorCallback? onPointerCallback,
+    required MouseCursorCallback? onHover,
+    required PointerMoveCallback? onMove,
     RenderBox? child,
     bool validForMouseTracker = true,
-  })  : _onPointerCallback = onPointerCallback,
+  })  : _onMove = onMove,
+        _onHover = onHover,
         _validForMouseTracker = validForMouseTracker {
-    _currentCursor = onPointerCallback?.call(null) ?? MouseCursor.defer;
+    _currentCursor = onHover?.call(null) ?? MouseCursor.defer;
   }
 
   late MouseCursor _currentCursor;
@@ -43,10 +50,16 @@ class RenderAutoCursorObject extends RenderProxyBoxWithHitTestBehavior
   @override
   MouseCursor get cursor => _currentCursor;
 
-  MouseCursorCallback? _onPointerCallback;
-  set onPointerCallback(MouseCursorCallback? value) {
-    if (_onPointerCallback == value) return;
-    _onPointerCallback = value;
+  PointerMoveCallback? _onMove;
+  set onMove(PointerMoveCallback? value) {
+    if (_onMove == value) return;
+    _onMove = value;
+  }
+
+  MouseCursorCallback? _onHover;
+  set onHover(MouseCursorCallback? value) {
+    if (_onHover == value) return;
+    _onHover = value;
     _currentCursor = value?.call(null) ?? MouseCursor.defer;
   }
 
@@ -59,11 +72,9 @@ class RenderAutoCursorObject extends RenderProxyBoxWithHitTestBehavior
     final relativeOffset = Offset(x, y);
 
     final newCursor =
-        _onPointerCallback?.call(!isExit ? relativeOffset : null) ??
-            MouseCursor.defer;
+        _onHover?.call(!isExit ? relativeOffset : null) ?? MouseCursor.defer;
 
     if (newCursor != _currentCursor) {
-      print('Cursor changed: $newCursor');
       _currentCursor = newCursor;
       markNeedsPaint();
     }
@@ -78,6 +89,10 @@ class RenderAutoCursorObject extends RenderProxyBoxWithHitTestBehavior
   @override
   void handleEvent(PointerEvent event, HitTestEntry entry) {
     assert(debugHandleEvent(event, entry));
+    // print("Handling event: $event");
+
+    _reportEvent(event);
+
     if (event is PointerHoverEvent) {
       _onPointerHover(event);
     }
@@ -93,6 +108,14 @@ class RenderAutoCursorObject extends RenderProxyBoxWithHitTestBehavior
 
   void _onPointerEnter(PointerEnterEvent event) {
     _update(event.position);
+  }
+
+  void _reportEvent(PointerEvent event) {
+    if (event is PointerMoveEvent || event is PointerDownEvent) {
+      _onMove?.call(event.delta, false);
+    } else if (event is PointerUpEvent) {
+      _onMove?.call(event.delta, true);
+    }
   }
 
   @override

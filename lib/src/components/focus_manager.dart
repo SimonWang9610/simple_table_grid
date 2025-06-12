@@ -1,13 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/table_focus_controller.dart';
-import 'package:simple_table_grid/src/models/key.dart';
-
-enum FocusStrategy {
-  row,
-  column,
-  cell,
-}
 
 final class TableFocusManager with TableCoordinatorMixin {
   final _selectedRows = LineFocusController<RowKey>();

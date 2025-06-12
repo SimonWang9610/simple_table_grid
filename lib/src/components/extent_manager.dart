@@ -1,13 +1,12 @@
-import 'package:simple_table_grid/src/components/coordinator.dart';
-import 'package:simple_table_grid/src/models/key.dart';
-import 'package:simple_table_grid/src/models/table_extent.dart';
+import 'package:flutter/foundation.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 
-final class TableExtentManager with TableCoordinatorMixin {
-  TableExtentManager({
-    required TableExtent defaultRowExtent,
-    required TableExtent defaultColumnExtent,
-    Map<int, TableExtent>? rowExtents,
-    Map<ColumnKey, TableExtent>? columnExtents,
+final class ExtentManager with ChangeNotifier {
+  ExtentManager({
+    required Extent defaultRowExtent,
+    required Extent defaultColumnExtent,
+    Map<int, Extent>? rowExtents,
+    Map<ColumnKey, Extent>? columnExtents,
   })  : _defaultRowExtent = defaultRowExtent,
         _defaultColumnExtent = defaultColumnExtent {
     if (rowExtents != null) {
@@ -19,27 +18,27 @@ final class TableExtentManager with TableCoordinatorMixin {
     }
   }
 
-  final Map<int, TableExtent> _mutatedRowExtents = {};
-  final Map<ColumnKey, TableExtent> _mutatedColumnExtents = {};
+  final Map<int, Extent> _mutatedRowExtents = {};
+  final Map<ColumnKey, Extent> _mutatedColumnExtents = {};
 
-  TableExtent _defaultRowExtent;
-  TableExtent _defaultColumnExtent;
+  Extent _defaultRowExtent;
+  Extent _defaultColumnExtent;
 
-  set defaultRowExtent(TableExtent value) {
+  set defaultRowExtent(Extent value) {
     if (_defaultRowExtent == value) return;
 
     _defaultRowExtent = value;
-    coordinator.notifyRebuild();
+    notifyListeners();
   }
 
-  set defaultColumnExtent(TableExtent value) {
+  set defaultColumnExtent(Extent value) {
     if (_defaultColumnExtent == value) return;
 
     _defaultColumnExtent = value;
-    coordinator.notifyRebuild();
+    notifyListeners();
   }
 
-  TableExtent getRowExtent(int index) {
+  Extent getRowExtent(int index) {
     if (_mutatedRowExtents.containsKey(index)) {
       return _mutatedRowExtents[index]!;
     }
@@ -47,26 +46,44 @@ final class TableExtentManager with TableCoordinatorMixin {
     return _defaultRowExtent;
   }
 
-  TableExtent getColumnExtent(ColumnKey columnId) {
-    if (_mutatedColumnExtents.containsKey(columnId)) {
-      return _mutatedColumnExtents[columnId]!;
+  Extent getColumnExtent(ColumnKey key) {
+    if (_mutatedColumnExtents.containsKey(key)) {
+      return _mutatedColumnExtents[key]!;
     }
 
     return _defaultColumnExtent;
   }
 
-  void setRowExtent(int index, TableExtent extent) {
+  void setRowExtent(int index, Extent extent) {
     if (_mutatedRowExtents[index] == extent) return;
 
     _mutatedRowExtents[index] = extent;
-    coordinator.notifyRebuild();
+    notifyListeners();
   }
 
-  void setColumnExtent(ColumnKey columnId, TableExtent extent) {
+  void setColumnExtent(ColumnKey columnId, Extent extent) {
     if (_mutatedColumnExtents[columnId] == extent) return;
 
     _mutatedColumnExtents[columnId] = extent;
-    coordinator.notifyRebuild();
+    notifyListeners();
+  }
+
+  void updateRowDelta(int index, double delta) {
+    final extent = getRowExtent(index);
+
+    final accepted = extent.accept(delta);
+
+    if (accepted == extent) return;
+    setRowExtent(index, accepted);
+  }
+
+  void updateColumnDelta(ColumnKey key, double delta) {
+    final extent = getColumnExtent(key);
+
+    final accepted = extent.accept(delta);
+
+    if (accepted == extent) return;
+    setColumnExtent(key, accepted);
   }
 
   @override
@@ -76,35 +93,12 @@ final class TableExtentManager with TableCoordinatorMixin {
     super.dispose();
   }
 
-  TableExtentManager copyWith({
-    TableExtent? defaultRowExtent,
-    TableExtent? defaultColumnExtent,
-    Map<int, TableExtent>? rowExtents,
-    Map<ColumnKey, TableExtent>? columnExtents,
-    bool rebuildImmediately = true,
-  }) {
-    final newManager = TableExtentManager(
-      defaultRowExtent: defaultRowExtent ?? _defaultRowExtent,
-      defaultColumnExtent: defaultColumnExtent ?? _defaultColumnExtent,
-      rowExtents: rowExtents ?? _mutatedRowExtents,
-      columnExtents: columnExtents ?? _mutatedColumnExtents,
-    )..bindCoordinator(coordinator);
+  Extent get defaultRowExtent => _defaultRowExtent;
+  Extent get defaultColumnExtent => _defaultColumnExtent;
 
-    dispose();
-
-    if (rebuildImmediately) {
-      newManager.coordinator.notifyRebuild();
-    }
-
-    return newManager;
-  }
-
-  TableExtent get defaultRowExtent => _defaultRowExtent;
-  TableExtent get defaultColumnExtent => _defaultColumnExtent;
-
-  Map<ColumnKey, TableExtent> get columnExtents => Map.unmodifiable(
+  Map<ColumnKey, Extent> get columnExtents => Map.unmodifiable(
         _mutatedColumnExtents,
       );
 
-  Map<int, TableExtent> get rowExtents => Map.unmodifiable(_mutatedRowExtents);
+  Map<int, Extent> get rowExtents => Map.unmodifiable(_mutatedRowExtents);
 }
