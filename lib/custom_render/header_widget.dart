@@ -2,19 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:simple_table_grid/custom_render/auto_cursor_region.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 
-typedef HeaderResizeCallback = void Function(
-  ColumnKey columnKey,
-  ResizeDirection direction,
-  double delta,
-  bool isEnd,
-);
-
 class HeaderWidget extends StatefulWidget {
   final Border? border;
   final EdgeInsets? padding;
   final ColumnHeaderDetail detail;
   final TableCellDetailBuilder<ColumnHeaderDetail> builder;
-  final HeaderResizeCallback? onResize;
+  final TableResizer? resizer;
   final bool isMiddleHeader;
 
   const HeaderWidget({
@@ -23,7 +16,7 @@ class HeaderWidget extends StatefulWidget {
     this.padding,
     required this.detail,
     required this.builder,
-    this.onResize,
+    this.resizer,
     this.isMiddleHeader = true,
   });
 
@@ -56,15 +49,14 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     }
 
     return AutoCursorWidget(
-      onHover: widget.onResize != null ? _getCursor : null,
-      onMove: widget.onResize != null ? _onMove : null,
+      onHover: widget.resizer != null ? _getCursor : null,
+      onMove: widget.resizer != null ? _onMove : null,
       child: child,
     );
   }
 
   MouseCursor _getCursor(Offset? offset) {
     if (offset == null) {
-      print('Pointer exit, resetting cursor');
       _cursor = SystemMouseCursors.basic;
       _resizeDirection = null;
       return _cursor;
@@ -84,17 +76,21 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     return _cursor;
   }
 
-  void _onMove(Offset delta, bool isEnd) {
-    if (_resizeDirection == null || isEnd) {
-      _resizeDirection = null;
+  void _onMove(Offset delta, PointerStatus status) {
+    if (_resizeDirection == null || status == PointerStatus.up) {
+      widget.resizer?.setResizeTarget(null);
       return;
     }
 
-    widget.onResize?.call(
-      widget.detail.columnKey,
-      _resizeDirection!,
-      delta.dx,
-      isEnd,
-    );
+    if (status == PointerStatus.down) {
+      widget.resizer?.setResizeTarget(
+        ResizeTarget(
+          key: widget.detail.columnKey,
+          direction: _resizeDirection!,
+        ),
+      );
+    } else {
+      widget.resizer?.resize(delta.dx);
+    }
   }
 }

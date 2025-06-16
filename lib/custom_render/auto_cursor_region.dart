@@ -1,9 +1,10 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 
 typedef MouseCursorCallback = MouseCursor Function(Offset? relativeOffset);
-typedef PointerMoveCallback = void Function(Offset pointerPosition, bool isEnd);
+typedef PointerMoveCallback = void Function(Offset delta, PointerStatus status);
 
 class AutoCursorWidget extends SingleChildRenderObjectWidget {
   final MouseCursorCallback? onHover;
@@ -111,10 +112,16 @@ class RenderAutoCursorObject extends RenderProxyBoxWithHitTestBehavior
   }
 
   void _reportEvent(PointerEvent event) {
-    if (event is PointerMoveEvent || event is PointerDownEvent) {
-      _onMove?.call(event.delta, false);
-    } else if (event is PointerUpEvent) {
-      _onMove?.call(event.delta, true);
+    final status = event is PointerDownEvent
+        ? PointerStatus.down
+        : (event is PointerMoveEvent
+            ? PointerStatus.move
+            : event is PointerUpEvent
+                ? PointerStatus.up
+                : null);
+
+    if (status != null) {
+      _onMove?.call(event.delta, status);
     }
   }
 

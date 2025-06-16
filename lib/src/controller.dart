@@ -1,15 +1,19 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/impl/column_interface_impl.dart';
-import 'package:simple_table_grid/src/impl/data_source_interface_impl.dart';
+import 'package:simple_table_grid/src/delegates.dart';
 
-abstract base class TableController with ChangeNotifier {
+abstract base class TableController
+    with ChangeNotifier, TableIndexFinder, TableResizer {
   TableController._();
 
   factory TableController({
     required List<ColumnKey> columns,
     List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
+    required Extent defaultRowExtent,
+    required Extent defaultColumnExtent,
+    Map<int, Extent>? rowExtents,
+    Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
   }) =>
@@ -19,6 +23,10 @@ abstract base class TableController with ChangeNotifier {
         alwaysShowHeader: alwaysShowHeader,
         selectionStrategies: selectionStrategies,
         hoveringStrategies: hoveringStrategies,
+        defaultRowExtent: defaultRowExtent,
+        defaultColumnExtent: defaultColumnExtent,
+        rowExtents: rowExtents,
+        columnExtents: columnExtents,
       );
 
   void updateStrategies({
@@ -55,17 +63,7 @@ abstract base class TableController with ChangeNotifier {
   int get dataCount;
 
   void addRows(List<RowData> rows);
-
-  RowKey getRowKey(int index);
-  RowKey? previousRow(RowKey key);
-  RowKey? nextRow(RowKey key);
-
-  ColumnKey getColumnKey(int index);
-  ColumnKey? previousColumn(ColumnKey key);
-  ColumnKey? nextColumn(ColumnKey key);
-
   void removeRows(List<RowKey> rows);
-
   void reorderRow(RowKey from, RowKey to);
   void pinRow(RowKey key);
   void unpinRow(RowKey key);
@@ -76,17 +74,40 @@ abstract base class TableController with ChangeNotifier {
   List<ColumnKey> get orderedColumns;
 
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity);
+
+  Extent getRowExtent(int index);
+  Extent getColumnExtent(ColumnKey key);
+
+  Map<ColumnKey, Extent> get columnExtents;
+
+  Map<int, Extent> get rowExtents;
 }
 
 final class _TableControllerImpl extends TableController
-    with TableCoordinator, TableColumnImplMixin, TableDataSourceImplMixin {
+    with
+        TableCoordinator,
+        TableColumnDelegateMixin,
+        TableDataSourceDelegateMixin,
+        TableFocusDelegateMixin,
+        ExtentDelegateMixin {
   _TableControllerImpl({
     required List<ColumnKey> columns,
     List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
+    required Extent defaultRowExtent,
+    required Extent defaultColumnExtent,
+    Map<int, Extent>? rowExtents,
+    Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
   }) : super._() {
+    extentManager = ExtentManager(
+      defaultRowExtent: defaultRowExtent,
+      defaultColumnExtent: defaultColumnExtent,
+      rowExtents: rowExtents ?? const {},
+      columnExtents: columnExtents ?? const {},
+    )..bindCoordinator(this);
+
     focusManager = TableFocusManager(
       hoveringStrategies: hoveringStrategies,
       selectionStrategies: selectionStrategies,
@@ -101,7 +122,11 @@ final class _TableControllerImpl extends TableController
     columnManager = TableColumnManager(columns)..bindCoordinator(this);
   }
 
+  @override
   late final TableFocusManager focusManager;
+
+  @override
+  late final ExtentManager extentManager;
 
   @override
   late final TableDataSource dataSource;
@@ -117,6 +142,7 @@ final class _TableControllerImpl extends TableController
 
   @override
   void dispose() {
+    extentManager.dispose();
     dataSource.dispose();
     columnManager.dispose();
     focusManager.dispose();
@@ -175,42 +201,6 @@ final class _TableControllerImpl extends TableController
     if (shouldNotify) {
       notifyRebuild();
     }
-  }
-
-  @override
-  void select({
-    List<RowKey>? rows,
-    List<ColumnKey>? columns,
-    List<CellKey>? cells,
-  }) {
-    focusManager.select(
-      rows: rows,
-      columns: columns,
-      cells: cells,
-    );
-  }
-
-  @override
-  void unselect({
-    List<RowKey>? rows,
-    List<ColumnKey>? columns,
-    List<CellKey>? cells,
-  }) {
-    focusManager.unselect(
-      rows: rows,
-      columns: columns,
-      cells: cells,
-    );
-  }
-
-  @override
-  void hoverOn({RowKey? row, ColumnKey? column}) {
-    focusManager.hoverOn(row: row, column: column);
-  }
-
-  @override
-  void hoverOff({RowKey? row, ColumnKey? column}) {
-    focusManager.hoverOff(row: row, column: column);
   }
 
   @override

@@ -20,11 +20,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final extentManager = ExtentManager(
-    defaultRowExtent: Extent.fixed(60),
-    defaultColumnExtent: Extent.range(pixels: 100, min: 60),
-  );
-
   late final _controller = TableController(
     columns: ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
         .map(
@@ -37,11 +32,12 @@ class _MyAppState extends State<MyApp> {
     selectionStrategies: [
       FocusStrategy.row,
     ],
+    defaultRowExtent: Extent.fixed(60),
+    defaultColumnExtent: Extent.range(pixels: 100, min: 60),
   );
 
   @override
   void dispose() {
-    extentManager.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -56,7 +52,6 @@ class _MyAppState extends State<MyApp> {
         padding: const EdgeInsets.all(8.0),
         child: TableGrid(
           controller: _controller,
-          extentManager: extentManager,
           border: TableGridBorder(
             vertical: BorderSide(
               color: Colors.red,

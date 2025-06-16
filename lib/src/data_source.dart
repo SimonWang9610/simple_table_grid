@@ -298,6 +298,27 @@ final class TableDataSource with TableCoordinatorMixin {
     return key!;
   }
 
+  int? getRowIndex(RowKey key) {
+    if (!_rows.containsKey(key)) {
+      return alwaysShowHeader ? 0 : null;
+    }
+
+    int? index;
+
+    if (_pinnedOrdering.contains(key)) {
+      index = _pinnedOrdering.indexOf(key);
+    } else if (_nonPinnedOrdering.contains(key)) {
+      index = (_nonPinnedOrdering.indexOf(key) ?? 0) + _pinnedRowCount;
+    }
+
+    assert(
+      index != null,
+      "Row key $key is not in the data source, cannot get index",
+    );
+
+    return index != null ? toVicinityRow(index) : null;
+  }
+
   dynamic getCellData(RowKey rowKey, ColumnKey columnKey) {
     final rowData = _rows[rowKey];
 

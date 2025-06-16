@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/models/cell_detail.dart';
 
 typedef TableCellDetailBuilder<T extends CellDetail> = Widget Function(
@@ -18,3 +19,8 @@ enum FocusStrategy {
   column,
   cell,
 }
+
+enum PointerStatus { up, down, move }
+
+typedef TableResizeTargetCallback<T extends TableKey> = void Function(
+    ResizeTarget<T>? target);

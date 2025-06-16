@@ -6,7 +6,6 @@ import 'package:simple_table_grid/simple_table_grid.dart';
 
 class TableGrid extends StatelessWidget {
   final TableController controller;
-  final ExtentManager extentManager;
   final ScrollController? horizontalScrollController;
   final ScrollController? verticalScrollController;
   final ScrollPhysics? horizontalScrollPhysics;
@@ -20,7 +19,6 @@ class TableGrid extends StatelessWidget {
   const TableGrid({
     super.key,
     required this.controller,
-    required this.extentManager,
     required this.builder,
     required this.headerBuilder,
     required this.border,
@@ -35,7 +33,7 @@ class TableGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([controller, extentManager]),
+      listenable: controller,
       builder: (_, __) {
         return TableGridView.builder(
           mainAxis: Axis.horizontal,
@@ -52,11 +50,11 @@ class TableGrid extends StatelessWidget {
           pinnedColumnCount: controller.pinnedColumnCount,
           pinnedRowCount: controller.pinnedRowCount,
           rowExtentBuilder: (index) {
-            return extentManager.getRowExtent(index);
+            return controller.getRowExtent(index);
           },
           columnExtentBuilder: (index) {
             final key = controller.getColumnKey(index);
-            return extentManager.getColumnExtent(key);
+            return controller.getColumnExtent(key);
           },
           builder: (_, vicinity) {
             final listenable = controller.getCellFocusNotifier(vicinity);
@@ -92,7 +90,7 @@ class TableGrid extends StatelessWidget {
           padding: padding,
           detail: detail,
           builder: headerBuilder,
-          onResize: resizeColumn ? _resizeColumn : null,
+          resizer: controller,
         ),
       TableCellDetail() => CellWidget(
           border: cellBorder,
@@ -101,23 +99,6 @@ class TableGrid extends StatelessWidget {
           builder: builder,
         ),
     };
-  }
-
-  void _resizeColumn(
-    ColumnKey columnKey,
-    ResizeDirection direction,
-    double delta,
-    bool isEnd,
-  ) {
-    if (direction == ResizeDirection.right) {
-      extentManager.updateColumnDelta(columnKey, delta);
-    } else if (direction == ResizeDirection.left) {
-      final previous = controller.previousColumn(columnKey);
-      if (previous == null) {
-        return;
-      }
-      extentManager.updateColumnDelta(previous, delta);
-    }
   }
 
   bool _isBottomEdge(int row) {

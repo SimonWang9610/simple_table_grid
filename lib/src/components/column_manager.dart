@@ -1,6 +1,6 @@
-import 'package:simple_table_grid/src/components/coordinator.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
+
 import 'package:simple_table_grid/src/components/key_ordering.dart';
-import 'package:simple_table_grid/src/models/key.dart';
 
 final class TableColumnManager with TableCoordinatorMixin {
   TableColumnManager(List<ColumnKey>? columns) {
@@ -128,5 +128,61 @@ final class TableColumnManager with TableCoordinatorMixin {
     super.dispose();
     _pinnedOrdering.reset();
     _nonPinnedOrdering.reset();
+  }
+}
+
+base mixin TableColumnDelegateMixin on TableController, TableIndexFinder {
+  TableColumnManager get columnManager;
+
+  @override
+  void addColumn(ColumnKey column, {bool pinned = false}) {
+    columnManager.add(column, pinned: pinned);
+  }
+
+  @override
+  void removeColumn(ColumnKey key) {
+    columnManager.remove(key);
+  }
+
+  @override
+  void pinColumn(ColumnKey key) {
+    columnManager.pin(key);
+  }
+
+  @override
+  void unpinColumn(ColumnKey key) {
+    columnManager.unpin(key);
+  }
+
+  @override
+  void reorderColumn(ColumnKey from, ColumnKey to) {
+    columnManager.reorder(from, to);
+  }
+
+  @override
+  int get columnCount => columnManager.columnCount;
+
+  @override
+  int get pinnedColumnCount => columnManager.pinnedColumnCount;
+
+  @override
+  List<ColumnKey> get orderedColumns => columnManager.orderedColumns;
+
+  @override
+  ColumnKey getColumnKey(int index) {
+    if (index < 0 || index >= columnManager.columnCount) {
+      throw RangeError.index(index, columnManager.orderedColumns, 'index');
+    }
+    return columnManager.orderedColumns[index];
+  }
+
+  @override
+  ColumnKey? previousColumn(ColumnKey key) {
+    return columnManager.previousColumn(key);
+  }
+
+  @override
+  ColumnKey? nextColumn(ColumnKey key) {
+    return columnManager.nextColumn(key);
   }
 }
