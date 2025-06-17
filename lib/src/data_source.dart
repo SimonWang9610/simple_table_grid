@@ -1,215 +1,347 @@
-import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/components/coordinator.dart';
+// import 'package:simple_table_grid/simple_table_grid.dart';
+// import 'package:simple_table_grid/src/components/key_ordering.dart';
 
-final class TableDataSource with TableCoordinatorMixin {
-  TableDataSource({
-    List<TableRowData> rows = const [],
-    bool alwaysShowHeader = true,
-  }) : _alwaysShowHeader = alwaysShowHeader {
-    add(rows);
-  }
+// final class TableDataSource with TableCoordinatorMixin {
+//   TableDataSource({
+//     List<RowData> rows = const [],
+//     bool alwaysShowHeader = true,
+//   }) : _alwaysShowHeader = alwaysShowHeader {
+//     for (final row in rows) {
+//       _rows[row.key] = row;
+//       _nonPinnedOrdering.add(row.key);
+//     }
+//   }
 
-  final _rows = <TableRowData>[];
+//   final _rows = <RowKey, RowData>{};
+//   final _pinnedOrdering = KeyOrdering.efficient(<RowKey>[]);
+//   final _nonPinnedOrdering = KeyOrdering.quick(<RowKey>[]);
 
-  int get dataCount => _rows.length;
+//   List<RowData> get orderedRows {
+//     final ordered = <RowData>[];
 
-  int get rowCount => dataCount + (_alwaysShowHeader ? 1 : 0);
+//     for (final key in _pinnedOrdering.keys) {
+//       ordered.add(_rows[key]!);
+//     }
 
-  bool _alwaysShowHeader;
-  bool get alwaysShowHeader => _alwaysShowHeader;
+//     for (final key in _nonPinnedOrdering.keys) {
+//       ordered.add(_rows[key]!);
+//     }
 
-  set alwaysShowHeader(bool value) {
-    if (_alwaysShowHeader == value) return;
-    _alwaysShowHeader = value;
-    coordinator.notifyRebuild();
-  }
+//     return ordered;
+//   }
 
-  int _pinnedRowCount = 0;
+//   int get dataCount => _rows.length;
 
-  int get pinnedRowCount {
-    assert(
-      _pinnedRowCount <= rowCount,
-      "Pinned rows $_pinnedRowCount must be less than or equal to row count $rowCount",
-    );
-    return alwaysShowHeader ? _pinnedRowCount + 1 : _pinnedRowCount;
-  }
+//   int get rowCount => dataCount + (_alwaysShowHeader ? 1 : 0);
 
-  void add(
-    List<TableRowData> rows, {
-    bool skipDuplicates = false,
-  }) {
-    if (rows.isEmpty) return;
+//   bool _alwaysShowHeader;
 
-    assert(
-      () {
-        final columns = coordinator.orderedColumns;
+//   bool get alwaysShowHeader => _alwaysShowHeader;
 
-        for (final row in rows) {
-          for (final column in columns) {
-            if (!row.containsKey(column)) {
-              return false;
-            }
-          }
-        }
+//   set alwaysShowHeader(bool value) {
+//     if (_alwaysShowHeader == value) return;
+//     _alwaysShowHeader = value;
+//     coordinator.notifyRebuild();
+//   }
 
-        return true;
-      }(),
-      "Some row data do not contain all columns",
-    );
+//   int get _pinnedRowCount => _pinnedOrdering.length;
 
-    bool shouldNotify = rows.isNotEmpty;
+//   int get pinnedRowCount {
+//     assert(
+//       _pinnedRowCount <= rowCount,
+//       "Pinned rows $_pinnedRowCount must be less than or equal to row count $rowCount",
+//     );
+//     return alwaysShowHeader ? _pinnedRowCount + 1 : _pinnedRowCount;
+//   }
 
-    if (!skipDuplicates) {
-      _rows.addAll(rows);
-    } else {
-      for (final row in rows) {
-        if (!_rows.contains(row)) {
-          _rows.add(row);
-        }
-      }
-    }
+//   void add(List<RowData> rows) {
+//     if (rows.isEmpty) return;
 
-    if (shouldNotify) {
-      coordinator.notifyRebuild();
-    }
-  }
+//     for (final row in rows) {
+//       if (_rows.containsKey(row.key)) {
+//         // If the row already exists, skip it
+//         continue;
+//       }
 
-  void remove(List<int> rows) {
-    if (rows.isEmpty) return;
+//       assert(
+//           !_pinnedOrdering.contains(row.key) &&
+//               !_nonPinnedOrdering.contains(row.key),
+//           "Row key ${row.key} must not be in either ordering");
 
-    bool shouldNotify = rows.isNotEmpty;
+//       _rows[row.key] = row;
+//       _nonPinnedOrdering.add(row.key);
+//     }
 
-    final indexMapped = Map<int, dynamic>.from(_rows.asMap());
-    final newIndices = <int, int>{};
+//     coordinator.notifyRebuild();
+//   }
 
-    for (final row in rows) {
-      if (row < pinnedRowCount) continue;
+//   void removeByKeys(List<RowKey> rows) {
+//     if (rows.isEmpty) return;
 
-      /// the index mapped's key is cell row
-      /// which is the index of the actual row data,
-      /// while the given row is vicinity row
-      /// which is the index of the row in the table
-      final dataIndex = toCellRow(row);
+//     for (final rowKey in rows) {
+//       if (_rows.containsKey(rowKey)) {
+//         _rows.remove(rowKey);
+//         _nonPinnedOrdering.remove(rowKey);
+//         _pinnedOrdering.remove(rowKey);
+//       }
+//     }
 
-      if (indexMapped.containsKey(dataIndex)) {
-        indexMapped.remove(dataIndex);
-        shouldNotify = true;
-      }
-    }
+//     coordinator.notifyRebuild();
+//   }
 
-    final newValues = <TableRowData>[];
-    final oldIndices = indexMapped.keys.toList();
+//   void remove(List<int> rows) {
+//     if (rows.isEmpty) return;
 
-    for (int i = 0; i < oldIndices.length; i++) {
-      final oldDataIndex = oldIndices[i];
-      newValues.add(indexMapped[oldDataIndex]);
-      newIndices[toVicinityRow(oldDataIndex)] = toVicinityRow(i);
-    }
+//     final keys = <RowKey>[];
 
-    _rows.clear();
-    _rows.addAll(newValues);
+//     for (final row in rows) {
+//       final RowKey? key;
 
-    coordinator.afterReindex(newRowIndices: newIndices);
+//       final dataIndex = toCellRow(row);
 
-    if (shouldNotify) {
-      coordinator.notifyRebuild();
-    }
-  }
+//       if (dataIndex >= _pinnedRowCount) {
+//         key = _nonPinnedOrdering[dataIndex - _pinnedRowCount];
+//       } else {
+//         key = _pinnedOrdering[dataIndex];
+//       }
 
-  void reorder(int from, int to) {
-    if (from == to) return;
+//       if (key != null) {
+//         assert(
+//           _rows.containsKey(key),
+//           "Key $key is not in the data source",
+//         );
+//         keys.add(key);
+//       }
+//     }
 
-    _reorderWithChecker(
-      from,
-      to,
-      (from, to) {
-        final left = pinnedRowCount - 1;
+//     removeByKeys(keys);
+//   }
 
-        return from != to &&
-            (from >= left && from < rowCount) &&
-            (to >= left && to < rowCount);
-      },
-    );
-  }
+//   void reorder(int from, int to) {
+//     if (from == to) return;
 
-  void pin(int index) {
-    assert(index >= 0 && index < _rows.length,
-        'Index $index is out of bounds for rows of length ${_rows.length}');
+//     final fromKey = from >= _pinnedRowCount
+//         ? _nonPinnedOrdering[from - _pinnedRowCount]
+//         : _pinnedOrdering[from];
 
-    if (index < pinnedRowCount) return;
-    _pinnedRowCount++;
+//     final toKey = to >= _pinnedRowCount
+//         ? _nonPinnedOrdering[to - _pinnedRowCount]
+//         : _pinnedOrdering[to];
 
-    _reorderWithChecker(
-      index,
-      pinnedRowCount - 1,
-      (from, to) => true,
-    );
-  }
+//     if (fromKey == null || toKey == null) {
+//       throw ArgumentError("Invalid row indices: from $from, to $to");
+//     }
 
-  void unpin(int index) {
-    assert(index >= 0 && index < _rows.length,
-        'Index $index is out of bounds for rows of length ${_rows.length}');
+//     reorderByKey(fromKey, toKey);
+//   }
 
-    if (index >= pinnedRowCount) return;
-    _pinnedRowCount--;
+//   void reorderByKey(RowKey from, RowKey to) {
+//     assert(
+//       _rows.containsKey(from),
+//       "From key $from is not in the data source",
+//     );
+//     assert(
+//       _rows.containsKey(to),
+//       "To key $to is not in the data source",
+//     );
 
-    _reorderWithChecker(
-      index,
-      pinnedRowCount - 1,
-      (from, to) => true,
-    );
-  }
+//     final fromPinned = _pinnedOrdering.contains(from);
 
-  @override
-  void dispose() {
-    super.dispose();
-    _rows.clear();
-    _pinnedRowCount = 0;
-  }
+//     assert(
+//       fromPinned || _nonPinnedOrdering.contains(from),
+//       "From key $from is not in the pinned or non-pinned ordering",
+//     );
 
-  dynamic operator [](int index) {
-    assert(
-      index >= 0 && index < dataCount,
-      "Index $index is out of bounds for rows of length $dataCount",
-    );
-    return _rows[index];
-  }
+//     final toPinned = _pinnedOrdering.contains(to);
 
-  dynamic getCellData(int dataIndex, ColumnId columnId) {
-    return _rows[dataIndex][columnId];
-  }
+//     assert(
+//       toPinned || _nonPinnedOrdering.contains(to),
+//       "To key $to is not in the pinned or non-pinned ordering",
+//     );
 
-  bool _reorderWithChecker(
-    int from,
-    int to,
-    bool Function(int from, int to) canReorder,
-  ) {
-    if (from == to) return false;
+//     if (fromPinned && toPinned) {
+//       _pinnedOrdering.reorder(from, to);
+//     } else if (!fromPinned && !toPinned) {
+//       _nonPinnedOrdering.reorder(from, to);
+//     } else if (fromPinned && !toPinned) {
+//       _pinnedOrdering.remove(from);
+//       _nonPinnedOrdering.add(from);
+//       _nonPinnedOrdering.reorder(from, to);
+//     } else if (!fromPinned && toPinned) {
+//       _nonPinnedOrdering.remove(from);
+//       _pinnedOrdering.add(from);
+//       _pinnedOrdering.reorder(from, to);
+//     }
 
-    if (!canReorder(from, to)) return false;
+//     coordinator.notifyRebuild();
+//   }
 
-    final row = _rows.removeAt(from);
-    _rows.insert(to, row);
+//   void pin(int index) {
+//     if (index < _pinnedRowCount) return;
 
-    coordinator.afterReorder(
-      from: from,
-      to: to,
-      forColumn: false,
-    );
+//     final key = index >= _pinnedRowCount
+//         ? _nonPinnedOrdering[index - _pinnedRowCount]
+//         : _pinnedOrdering[index];
 
-    coordinator.notifyRebuild();
+//     if (key != null) {
+//       pinByKey(key);
+//     }
+//   }
 
-    return true;
-  }
+//   void pinByKey(RowKey key) {
+//     if (!_rows.containsKey(key) || _pinnedOrdering.contains(key)) return;
 
-  // Convert a cell row (index of the actual data list)
-  // to a vicinity row (index of the table)
-  int toVicinityRow(int row) {
-    return alwaysShowHeader ? row + 1 : row;
-  }
+//     _pinnedOrdering.add(key);
+//     _nonPinnedOrdering.remove(key);
 
-  // Convert a vicinity row to a cell row
-  int toCellRow(int row) {
-    return alwaysShowHeader ? row - 1 : row;
-  }
-}
+//     coordinator.notifyRebuild();
+//   }
+
+//   void unpin(int index) {
+//     if (index >= _pinnedRowCount) return;
+
+//     final key = index >= _pinnedRowCount
+//         ? _nonPinnedOrdering[index - _pinnedRowCount]
+//         : _pinnedOrdering[index];
+
+//     if (key != null) {
+//       unpinByKey(key);
+//     }
+//   }
+
+//   void unpinByKey(RowKey key) {
+//     if (!_rows.containsKey(key) || !_pinnedOrdering.contains(key)) return;
+
+//     _pinnedOrdering.remove(key);
+//     _nonPinnedOrdering.insert(0, key);
+
+//     coordinator.notifyRebuild();
+//   }
+
+//   @override
+//   void dispose() {
+//     super.dispose();
+//     _nonPinnedOrdering.reset();
+//     _pinnedOrdering.reset();
+//   }
+
+//   RowKey? previousRow(RowKey key) {
+//     assert(
+//       _rows.containsKey(key),
+//       "Row key $key is not in the data source",
+//     );
+
+//     final pinnedIndex = _pinnedOrdering.indexOf(key);
+
+//     if (pinnedIndex != null) {
+//       return _pinnedOrdering.firstKey != key
+//           ? _pinnedOrdering[pinnedIndex - 1]
+//           : null;
+//     }
+
+//     final nonPinnedIndex = _nonPinnedOrdering.indexOf(key);
+//     if (nonPinnedIndex != null) {
+//       if (_nonPinnedOrdering.firstKey == key) {
+//         return _pinnedOrdering.lastKey;
+//       } else {
+//         return _nonPinnedOrdering[nonPinnedIndex - 1];
+//       }
+//     }
+
+//     return null; // Key not found in either ordering
+//   }
+
+//   RowKey? nextRow(RowKey key) {
+//     assert(
+//       _rows.containsKey(key),
+//       "Row key $key is not in the data source",
+//     );
+
+//     final pinnedIndex = _pinnedOrdering.indexOf(key);
+
+//     if (pinnedIndex != null) {
+//       return _pinnedOrdering.lastKey != key
+//           ? _pinnedOrdering[pinnedIndex + 1]
+//           : _nonPinnedOrdering.firstKey;
+//     }
+
+//     final nonPinnedIndex = _nonPinnedOrdering.indexOf(key);
+
+//     if (nonPinnedIndex != null) {
+//       if (_nonPinnedOrdering.lastKey != key) {
+//         return _nonPinnedOrdering[nonPinnedIndex + 1];
+//       } else {
+//         return null;
+//       }
+//     }
+
+//     return null; // Key not found in either ordering
+//   }
+
+//   RowKey getRowKey(int index) {
+//     final dateIndex = toCellRow(index);
+
+//     assert(
+//       dateIndex >= 0 && dateIndex < dataCount,
+//       "Data index $dateIndex is out of bounds for rows of length $dataCount",
+//     );
+
+//     final key = dateIndex >= _pinnedRowCount
+//         ? _nonPinnedOrdering[dateIndex - _pinnedRowCount]
+//         : _pinnedOrdering[dateIndex];
+
+//     assert(
+//       key != null && _rows.containsKey(key),
+//       "Row key at index $index is null, which should not happen",
+//     );
+
+//     return key!;
+//   }
+
+//   int? getRowIndex(RowKey key) {
+//     if (!_rows.containsKey(key)) {
+//       return alwaysShowHeader ? 0 : null;
+//     }
+
+//     int? index;
+
+//     if (_pinnedOrdering.contains(key)) {
+//       index = _pinnedOrdering.indexOf(key);
+//     } else if (_nonPinnedOrdering.contains(key)) {
+//       index = (_nonPinnedOrdering.indexOf(key) ?? 0) + _pinnedRowCount;
+//     }
+
+//     assert(
+//       index != null,
+//       "Row key $key is not in the data source, cannot get index",
+//     );
+
+//     return index != null ? toVicinityRow(index) : null;
+//   }
+
+//   dynamic getCellData(RowKey rowKey, ColumnKey columnKey) {
+//     final rowData = _rows[rowKey];
+
+//     assert(
+//       rowData != null,
+//       "Row data for key $rowKey is null, which should not happen",
+//     );
+
+//     return rowData![columnKey];
+//   }
+
+//   /// Convert a vicinity row to a cell row.
+//   /// when [alwaysShowHeader] is true, the table column headers are the first row logically during rendering.
+//   /// This method adjusts the row index to account for the header row.
+//   int toCellRow(int row) {
+//     return alwaysShowHeader ? row - 1 : row;
+//   }
+
+//   int toVicinityRow(int cellRow) {
+//     return alwaysShowHeader ? cellRow + 1 : cellRow;
+//   }
+
+//   bool isColumnHeader(int vicinityRow) {
+//     return alwaysShowHeader ? vicinityRow == 0 : false;
+//   }
+// }

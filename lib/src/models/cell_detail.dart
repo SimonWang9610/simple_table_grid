@@ -1,15 +1,13 @@
-import 'package:simple_table_grid/src/models/cell_index.dart';
-
-typedef ColumnId = String;
+import 'package:simple_table_grid/src/models/key.dart';
 
 sealed class CellDetail {
-  final ColumnId columnId;
+  final ColumnKey columnKey;
   final bool isPinned;
   final bool selected;
   final bool hovering;
 
   const CellDetail({
-    required this.columnId,
+    required this.columnKey,
     this.isPinned = false,
     this.selected = false,
     this.hovering = false,
@@ -19,7 +17,7 @@ sealed class CellDetail {
   bool operator ==(covariant CellDetail other) {
     if (identical(this, other)) return true;
 
-    return other.columnId == columnId &&
+    return other.columnKey == columnKey &&
         other.isPinned == isPinned &&
         other.selected == selected &&
         other.hovering == hovering;
@@ -27,7 +25,7 @@ sealed class CellDetail {
 
   @override
   int get hashCode {
-    return columnId.hashCode ^
+    return columnKey.hashCode ^
         isPinned.hashCode ^
         selected.hashCode ^
         hovering.hashCode;
@@ -35,15 +33,13 @@ sealed class CellDetail {
 
   @override
   String toString() {
-    return 'CellDetail(columnId: $columnId, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
+    return 'CellDetail(columnKey: $columnKey, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
   }
 }
 
 final class ColumnHeaderDetail extends CellDetail {
-  final int column;
   const ColumnHeaderDetail({
-    required super.columnId,
-    required this.column,
+    required super.columnKey,
     super.isPinned = false,
     super.selected = false,
     super.hovering = false,
@@ -53,8 +49,7 @@ final class ColumnHeaderDetail extends CellDetail {
   bool operator ==(covariant ColumnHeaderDetail other) {
     if (identical(this, other)) return true;
 
-    return other.column == column &&
-        other.columnId == columnId &&
+    return other.columnKey == columnKey &&
         other.isPinned == isPinned &&
         other.selected == selected &&
         other.hovering == hovering;
@@ -62,37 +57,38 @@ final class ColumnHeaderDetail extends CellDetail {
 
   @override
   int get hashCode =>
-      column.hashCode ^
-      columnId.hashCode ^
+      columnKey.hashCode ^
       isPinned.hashCode ^
       selected.hashCode ^
       hovering.hashCode;
 
   @override
   String toString() {
-    return 'ColumnHeaderDetail(columnId: $columnId, column: $column, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
+    return 'ColumnHeaderDetail(columnKey: $columnKey, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
   }
 }
 
 final class TableCellDetail<T> extends CellDetail {
-  final CellIndex index;
+  final RowKey rowKey;
   final T? cellData;
 
   const TableCellDetail({
-    required super.columnId,
-    required this.index,
+    required super.columnKey,
+    required this.rowKey,
     this.cellData,
     super.isPinned = false,
     super.selected = false,
     super.hovering = false,
   });
 
+  CellKey get cellKey => CellKey(rowKey, columnKey);
+
   @override
   bool operator ==(covariant TableCellDetail other) {
     if (identical(this, other)) return true;
 
-    return other.index == index &&
-        other.columnId == columnId &&
+    return other.rowKey == rowKey &&
+        other.columnKey == columnKey &&
         other.isPinned == isPinned &&
         other.selected == selected &&
         other.hovering == hovering &&
@@ -101,8 +97,8 @@ final class TableCellDetail<T> extends CellDetail {
 
   @override
   int get hashCode {
-    return index.hashCode ^
-        columnId.hashCode ^
+    return rowKey.hashCode ^
+        columnKey.hashCode ^
         isPinned.hashCode ^
         selected.hashCode ^
         hovering.hashCode ^
@@ -111,6 +107,6 @@ final class TableCellDetail<T> extends CellDetail {
 
   @override
   String toString() {
-    return 'TableCellDetail(columnId: $columnId, index: $index, cellData: $cellData, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
+    return 'TableCellDetail(columnKey: $columnKey, rowKey: $rowKey, cellData: $cellData, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
   }
 }

@@ -20,32 +20,24 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  final _extentManager = TableExtentManager(
-    defaultColumnExtent: TableExtent.fixed(150),
-    defaultRowExtent: TableExtent.fixed(50),
-  );
-
   late final _controller = TableController(
-    columns: [
-      "A",
-      "B",
-      "C",
-      "D",
-      "E",
-      "F",
-    ],
-    extentManager: _extentManager,
+    columns: ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+        .map(
+          (e) => ColumnKey(e),
+        )
+        .toList(),
     hoveringStrategies: [
-      TableHoveringStrategy.row,
+      FocusStrategy.row,
     ],
     selectionStrategies: [
-      TableSelectionStrategy.cell,
+      FocusStrategy.row,
     ],
+    defaultRowExtent: Extent.fixed(60),
+    defaultColumnExtent: Extent.range(pixels: 100, min: 60),
   );
 
   @override
   void dispose() {
-    _extentManager.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -60,23 +52,33 @@ class _MyAppState extends State<MyApp> {
         padding: const EdgeInsets.all(8.0),
         child: TableGrid(
           controller: _controller,
-          cellBuilder: _buildCell,
-          columnBuilder: _buildColumn,
           border: TableGridBorder(
-              // vertical: BorderSide(
-              //   color: Colors.red,
-              //   width: 2,
-              // ),
-              // horizontal: BorderSide(
-              //   color: Colors.black,
-              //   width: 2,
-              // ),
-              ),
-          loadingBuilder: (ctx) {
-            return CircularProgressIndicator(
+            vertical: BorderSide(
               color: Colors.red,
-            );
-          },
+              width: 1,
+            ),
+            horizontal: BorderSide(
+              color: Colors.black,
+              width: 1,
+            ),
+          ),
+          builder: _buildCell,
+          headerBuilder: _buildColumn,
+          // border: TableGridBorder(
+          //     // vertical: BorderSide(
+          //     //   color: Colors.red,
+          //     //   width: 2,
+          //     // ),
+          //     // horizontal: BorderSide(
+          //     //   color: Colors.black,
+          //     //   width: 2,
+          //     // ),
+          //     ),
+          // loadingBuilder: (ctx) {
+          //   return CircularProgressIndicator(
+          //     color: Colors.red,
+          //   );
+          // },
         ),
       ),
       persistentFooterAlignment: AlignmentDirectional.center,
@@ -84,16 +86,8 @@ class _MyAppState extends State<MyApp> {
         IconButton(
           icon: const Icon(Icons.add),
           onPressed: () {
-            _addRows(1);
+            _addRows(10);
           },
-        ),
-        TextButton(
-          onPressed: () {
-            _controller.removeRows(
-              [0],
-            );
-          },
-          child: Text("Remove first row"),
         ),
         TextButton(
           onPressed: () {
@@ -106,12 +100,40 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget _buildColumn(BuildContext ctx, ColumnHeaderDetail detail) {
+    return Container(
+      color: detail.isPinned ? Colors.blue : Colors.yellow,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            detail.columnKey.id,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              if (detail.isPinned) {
+                _controller.columns.unpin(detail.columnKey);
+              } else {
+                _controller.columns.pin(detail.columnKey);
+              }
+            },
+            icon: Icon(
+              detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            ),
+          ),
+        ],
+      ),
+    );
+
     return InkWell(
       onTap: () {
         if (detail.isPinned) {
-          _controller.unpinColumn(detail.columnId);
+          _controller.columns.unpin(detail.columnKey);
         } else {
-          _controller.pinColumn(detail.columnId);
+          _controller.columns.pin(detail.columnKey);
         }
       },
       child: Container(
@@ -120,7 +142,7 @@ class _MyAppState extends State<MyApp> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              detail.columnId,
+              detail.columnKey.id,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -143,16 +165,23 @@ class _MyAppState extends State<MyApp> {
     return InkWell(
       onTap: () {
         if (!detail.selected) {
-          _controller.select(cells: [detail.index]);
+          _controller.focuser.select(rows: [detail.rowKey]);
         } else {
-          _controller.unselect(cells: [detail.index]);
+          _controller.focuser.unselect(rows: [detail.rowKey]);
+        }
+      },
+      onLongPress: () {
+        if (detail.isPinned) {
+          _controller.rows.unpin(detail.rowKey);
+        } else {
+          _controller.rows.pin(detail.rowKey);
         }
       },
       onHover: (value) {
         if (value) {
-          _controller.hoverOn(row: detail.index.row);
+          _controller.focuser.hoverOn(row: detail.rowKey);
         } else {
-          _controller.hoverOff(row: detail.index.row);
+          _controller.focuser.hoverOff(row: detail.rowKey);
         }
       },
       child: Container(
@@ -167,7 +196,7 @@ class _MyAppState extends State<MyApp> {
         ),
         child: Center(
           child: Text(
-            "$name, ${detail.columnId}",
+            "$name, ${detail.columnKey.id}",
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -179,40 +208,41 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _addRows(int count) {
-    final columns = _controller.orderedColumns;
+    final columns = _controller.columns.ordered;
 
     final rows = List.generate(
       count,
-      (index) => {
-        for (final column in columns)
-          column: 'Row ${_controller.dataCount + index}',
-      },
+      (index) => RowData(
+        RowKey(UniqueKey()),
+        {
+          for (final column in columns)
+            column: 'Row ${_controller.rows.dataCount + index}',
+        },
+      ),
     );
 
-    _controller.addRows(
-      rows,
-      skipDuplicates: true,
-      removePlaceholder: true,
-    );
+    _controller.rows.addAll(rows);
   }
 
   void _randomRemove(bool row, bool column) {
     final rnd = Random();
 
-    final nextRow = rnd.nextInt(_controller.dataCount) +
-        _controller.rowCount -
-        _controller.dataCount;
+    final nextRow = rnd.nextInt(_controller.rows.dataCount) + 1;
+    print("Next row: $nextRow");
 
     final nextColumn = rnd.nextInt(_controller.columnCount);
 
+    final rowKey = _controller.finder.getRowKey(nextRow);
+    final columnKey = _controller.finder.getColumnKey(nextColumn);
+
     if (row) {
-      _controller.removeRows([nextRow]);
+      print("Removing row: $rowKey");
+      _controller.rows.remove(rowKey!);
     }
 
     if (column) {
-      _controller.removeColumn(
-        _controller.orderedColumns[nextColumn],
-      );
+      print("Removing column: $columnKey");
+      _controller.columns.remove(columnKey);
     }
   }
 }

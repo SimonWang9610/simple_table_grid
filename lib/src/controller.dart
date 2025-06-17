@@ -1,254 +1,222 @@
-import 'package:flutter/widgets.dart';
-import 'package:simple_table_grid/src/components/action_manager.dart';
-import 'package:simple_table_grid/src/components/column_manager.dart';
-import 'package:simple_table_grid/src/components/coordinator.dart';
-import 'package:simple_table_grid/src/components/extent_manager.dart';
-import 'package:simple_table_grid/src/data_source.dart';
-import 'package:simple_table_grid/src/impl/action_interface_impl.dart';
-import 'package:simple_table_grid/src/impl/column_interface_impl.dart';
-import 'package:simple_table_grid/src/impl/data_source_interface_impl.dart';
-import 'package:simple_table_grid/src/models/cell_detail.dart';
-import 'package:simple_table_grid/src/models/cell_index.dart';
-import 'package:simple_table_grid/src/models/misc.dart';
-import 'package:simple_table_grid/src/models/table_grid_border.dart';
-import 'package:two_dimensional_scrollables/two_dimensional_scrollables.dart';
+// import 'package:flutter/widgets.dart';
+// import 'package:simple_table_grid/simple_table_grid.dart';
+// import 'package:simple_table_grid/src/delegates.dart';
 
-abstract base class TableController with ChangeNotifier {
-  TableController._();
+// abstract base class TableController
+//     with ChangeNotifier, TableIndexFinder, TableResizer {
+//   TableController._();
 
-  factory TableController({
-    required List<ColumnId> columns,
-    required TableExtentManager extentManager,
-    List<TableRowData> initialRows = const [],
-    bool alwaysShowHeader = true,
-    List<TableSelectionStrategy> selectionStrategies = const [
-      TableSelectionStrategy.row
-    ],
-    List<TableHoveringStrategy> hoveringStrategies = const [
-      TableHoveringStrategy.row
-    ],
-  }) =>
-      _TableControllerImpl(
-        columns: columns,
-        extentManager: extentManager,
-        initialRows: initialRows,
-        alwaysShowHeader: alwaysShowHeader,
-        selectionStrategies: selectionStrategies,
-        hoveringStrategies: hoveringStrategies,
-      );
+//   factory TableController({
+//     required List<ColumnKey> columns,
+//     List<RowData> initialRows = const [],
+//     bool alwaysShowHeader = true,
+//     required Extent defaultRowExtent,
+//     required Extent defaultColumnExtent,
+//     Map<int, Extent>? rowExtents,
+//     Map<ColumnKey, Extent>? columnExtents,
+//     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
+//     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
+//   }) =>
+//       _TableControllerImpl(
+//         columns: columns,
+//         initialRows: initialRows,
+//         alwaysShowHeader: alwaysShowHeader,
+//         selectionStrategies: selectionStrategies,
+//         hoveringStrategies: hoveringStrategies,
+//         defaultRowExtent: defaultRowExtent,
+//         defaultColumnExtent: defaultColumnExtent,
+//         rowExtents: rowExtents,
+//         columnExtents: columnExtents,
+//       );
 
-  void updateStrategies({
-    List<TableSelectionStrategy>? selectionStrategies,
-    List<TableHoveringStrategy>? hoveringStrategies,
-  });
+//   void updateStrategies({
+//     List<FocusStrategy>? selectionStrategies,
+//     List<FocusStrategy>? hoveringStrategies,
+//   });
 
-  void select({
-    List<int>? rows,
-    List<int>? columns,
-    List<CellIndex>? cells,
-  });
-  void unselect({List<int>? rows, List<int>? columns, List<CellIndex>? cells});
+//   void select({
+//     List<RowKey>? rows,
+//     List<ColumnKey>? columns,
+//     List<CellKey>? cells,
+//   });
+//   void unselect({
+//     List<RowKey>? rows,
+//     List<ColumnKey>? columns,
+//     List<CellKey>? cells,
+//   });
 
-  void hoverOn({int? row, int? column});
-  void hoverOff({int? row, int? column});
+//   void hoverOn({RowKey? row, ColumnKey? column});
+//   void hoverOff({RowKey? row, ColumnKey? column});
+//   Listenable? getCellFocusNotifier(ChildVicinity vicinity);
 
-  bool isCellSelected(int row, int column);
-  bool isCellHovered(int row, int column);
+//   int get columnCount;
+//   int get pinnedColumnCount;
 
-  int get columnCount;
-  int get pinnedColumnCount;
-  void reorderColumn(ColumnId id, int to);
-  void addColumn(ColumnId column, {bool pinned = false});
-  void removeColumn(ColumnId id);
-  void pinColumn(ColumnId id);
-  void unpinColumn(ColumnId id);
-  bool isColumnHeader(int vicinityRow);
+//   void reorderColumn(ColumnKey from, ColumnKey to);
+//   void addColumn(ColumnKey column, {bool pinned = false});
+//   void removeColumn(ColumnKey key);
+//   void pinColumn(ColumnKey key);
+//   void unpinColumn(ColumnKey key);
 
-  int get rowCount;
-  int get pinnedRowCount;
-  int get dataCount;
+//   int get rowCount;
+//   int get pinnedRowCount;
+//   int get dataCount;
 
-  void addRows(
-    List<TableRowData> rows, {
-    bool skipDuplicates = false,
-    bool removePlaceholder = true,
-  });
-  void removeRows(
-    List<int> rows, {
-    bool showPlaceholder = false,
-  });
-  void reorderRow(int fromDataIndex, int toDataIndex);
-  void pinRow(int dataIndex);
-  void unpinRow(int dataIndex);
+//   void addRows(List<RowData> rows);
+//   void removeRows(List<RowKey> rows);
+//   void reorderRow(RowKey from, RowKey to);
+//   void pinRow(RowKey key);
+//   void unpinRow(RowKey key);
 
-  void toggleHeaderVisibility(bool alwaysShowHeader);
+//   void toggleHeaderVisibility(bool alwaysShowHeader);
 
-  // Listenable get listenable;
-  List<ColumnId> get orderedColumns;
+//   // Listenable get listenable;
+//   List<ColumnKey> get orderedColumns;
 
-  TableSpan buildRowSpan(int index, TableGridBorder border);
-  TableSpan buildColumnSpan(int index, TableGridBorder border);
+//   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity);
 
-  T getCellDetail<T extends CellDetail>(TableVicinity vicinity);
-  Listenable? getCellActionNotifier(TableVicinity vicinity);
-  CellIndex getCellIndex(TableVicinity vicinity);
+//   Extent getRowExtent(int index);
+//   Extent getColumnExtent(ColumnKey key);
 
-  int toVicinityRow(int row);
+//   Map<ColumnKey, Extent> get columnExtents;
 
-  set extentManager(TableExtentManager value);
-}
+//   Map<int, Extent> get rowExtents;
+// }
 
-final class _TableControllerImpl extends TableController
-    with
-        TableCoordinator,
-        TableActionImplMixin,
-        TableColumnImplMixin,
-        TableDataSourceImplMixin {
-  _TableControllerImpl({
-    required List<ColumnId> columns,
-    required TableExtentManager extentManager,
-    List<TableRowData> initialRows = const [],
-    bool alwaysShowHeader = true,
-    List<TableSelectionStrategy> selectionStrategies = const [
-      TableSelectionStrategy.row
-    ],
-    List<TableHoveringStrategy> hoveringStrategies = const [
-      TableHoveringStrategy.row
-    ],
-  })  : _extentManager = extentManager,
-        super._() {
-    actionManager = ActionManager(
-      hoveringStrategies: hoveringStrategies,
-      selectionStrategies: selectionStrategies,
-    )..bindCoordinator(this);
+// final class _TableControllerImpl extends TableController
+//     with
+//         TableCoordinator,
+//         TableColumnDelegateMixin,
+//         TableDataSourceDelegateMixin,
+//         TableFocusDelegateMixin,
+//         ExtentDelegateMixin {
+//   _TableControllerImpl({
+//     required List<ColumnKey> columns,
+//     List<RowData> initialRows = const [],
+//     bool alwaysShowHeader = true,
+//     required Extent defaultRowExtent,
+//     required Extent defaultColumnExtent,
+//     Map<int, Extent>? rowExtents,
+//     Map<ColumnKey, Extent>? columnExtents,
+//     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
+//     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
+//   }) : super._() {
+//     extentManager = ExtentManager(
+//       defaultRowExtent: defaultRowExtent,
+//       defaultColumnExtent: defaultColumnExtent,
+//       rowExtents: rowExtents ?? const {},
+//       columnExtents: columnExtents ?? const {},
+//     )..bindCoordinator(this);
 
-    dataSource = TableDataSource(
-      alwaysShowHeader: alwaysShowHeader,
-    )
-      ..bindCoordinator(this)
-      ..add(initialRows);
+//     focusManager = TableFocusManager(
+//       hoveringStrategies: hoveringStrategies,
+//       selectionStrategies: selectionStrategies,
+//     )..bindCoordinator(this);
 
-    columnManager = TableColumnManager()
-      ..bindCoordinator(this)
-      ..setColumns(columns);
+//     dataSource = TableDataSource(
+//       alwaysShowHeader: alwaysShowHeader,
+//     )
+//       ..bindCoordinator(this)
+//       ..add(initialRows);
 
-    _extentManager.bindCoordinator(this);
-  }
+//     columnManager = TableColumnManager(columns)..bindCoordinator(this);
+//   }
 
-  @override
-  late final ActionManager actionManager;
+//   @override
+//   late final TableFocusManager focusManager;
 
-  @override
-  late final TableDataSource dataSource;
+//   @override
+//   late final ExtentManager extentManager;
 
-  @override
-  late final TableColumnManager columnManager;
+//   @override
+//   late final TableDataSource dataSource;
 
-  TableExtentManager _extentManager;
+//   @override
+//   late final TableColumnManager columnManager;
 
-  @override
-  set extentManager(TableExtentManager value) {
-    if (_extentManager == value) return;
-    _extentManager.dispose();
-    _extentManager = value;
-    _extentManager.bindCoordinator(this);
-    notifyRebuild();
-  }
+//   @override
+//   @protected
+//   void notifyRebuild() {
+//     notifyListeners();
+//   }
 
-  @override
-  @protected
-  void notifyRebuild() {
-    notifyListeners();
-  }
+//   @override
+//   void dispose() {
+//     extentManager.dispose();
+//     dataSource.dispose();
+//     columnManager.dispose();
+//     focusManager.dispose();
+//     super.dispose();
+//   }
 
-  @override
-  void afterReorder({
-    required int from,
-    required int to,
-    required bool forColumn,
-  }) {
-    actionManager.adapt(
-      from,
-      to,
-      forColumn: forColumn,
-    );
-  }
+//   @override
+//   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity) {
+//     final columnKey = orderedColumns[vicinity.column];
 
-  @override
-  void afterReindex({
-    Map<int, int>? newRowIndices,
-    Map<int, int>? newColumnIndices,
-  }) {
-    actionManager.reindex(
-      newRowIndices: newRowIndices,
-      newColumnIndices: newColumnIndices,
-    );
-  }
+//     if (dataSource.isColumnHeader(vicinity.row)) {
+//       return ColumnHeaderDetail(
+//         columnKey: columnKey,
+//         isPinned: isColumnPinned(vicinity.column),
+//         selected: focusManager.isColumnSelected(columnKey),
+//         hovering: focusManager.isColumnHovering(columnKey),
+//       ) as T;
+//     }
 
-  @override
-  void dispose() {
-    _extentManager.dispose();
-    dataSource.dispose();
-    columnManager.dispose();
-    actionManager.dispose();
-    super.dispose();
-  }
+//     final rowKey = dataSource.getRowKey(vicinity.row);
 
-  @override
-  bool isColumnHeader(int vicinityRow) {
-    return dataSource.alwaysShowHeader ? vicinityRow == 0 : false;
-  }
+//     return TableCellDetail(
+//       columnKey: columnKey,
+//       rowKey: rowKey,
+//       isPinned: isRowPinned(vicinity.row),
+//       selected: focusManager.isCellSelected(
+//         rowKey,
+//         columnKey,
+//       ),
+//       hovering: focusManager.isCellHovering(
+//         rowKey,
+//         columnKey,
+//       ),
+//       cellData: dataSource.getCellData(
+//         rowKey,
+//         columnKey,
+//       ),
+//     ) as T;
+//   }
 
-  @override
-  T getCellDetail<T extends CellDetail>(TableVicinity vicinity) {
-    final selected =
-        actionManager.isCellSelected(vicinity.row, vicinity.column);
-    final hovering =
-        actionManager.isCellHovering(vicinity.row, vicinity.column);
+//   @override
+//   void updateStrategies({
+//     List<FocusStrategy>? selectionStrategies,
+//     List<FocusStrategy>? hoveringStrategies,
+//   }) {
+//     bool shouldNotify = false;
 
-    final columnId = orderedColumns[vicinity.column];
-    final isPinned = vicinity.column < pinnedColumnCount;
+//     if (selectionStrategies != null) {
+//       shouldNotify |= focusManager.updateSelectionStrategy(selectionStrategies);
+//     }
 
-    if (isColumnHeader(vicinity.row)) {
-      return ColumnHeaderDetail(
-        columnId: columnId,
-        column: vicinity.column,
-        isPinned: isPinned,
-        selected: selected,
-        hovering: hovering,
-      ) as T;
-    }
+//     if (hoveringStrategies != null) {
+//       shouldNotify |= focusManager.updateHoveringStrategy(hoveringStrategies);
+//     }
 
-    final cellIndex = getCellIndex(vicinity);
+//     if (shouldNotify) {
+//       notifyRebuild();
+//     }
+//   }
 
-    return TableCellDetail(
-      columnId: columnId,
-      index: cellIndex,
-      isPinned: isPinned,
-      selected: selected,
-      hovering: hovering,
-      cellData: dataSource.getCellData(cellIndex.row, columnId),
-    ) as T;
-  }
+//   @override
+//   Listenable? getCellFocusNotifier(ChildVicinity vicinity) {
+//     if (dataSource.isColumnHeader(vicinity.row)) {
+//       return focusManager.columnFocusNotifier;
+//     } else {
+//       return focusManager.cellFocusNotifier;
+//     }
+//   }
 
-  @override
-  TableSpan buildColumnSpan(int index, TableGridBorder border) {
-    final columnId = orderedColumns[index];
-    final extent = _extentManager.getColumnExtent(columnId);
-    return border.build(
-      axis: Axis.vertical,
-      extent: extent,
-      last: index == columnCount - 1,
-    );
-  }
+//   bool isColumnPinned(int vicinityColumn) {
+//     return vicinityColumn < pinnedColumnCount;
+//   }
 
-  @override
-  TableSpan buildRowSpan(int index, TableGridBorder border) {
-    final extent = _extentManager.getRowExtent(index);
-    return border.build(
-      axis: Axis.horizontal,
-      extent: extent,
-      last: index == rowCount - 1,
-    );
-  }
-}
+//   bool isRowPinned(int vicinityRow) {
+//     return vicinityRow < pinnedRowCount;
+//   }
+// }
