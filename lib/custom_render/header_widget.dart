@@ -64,7 +64,6 @@ class _HeaderWidgetState extends State<HeaderWidget> {
 
     if (offset.dx > 0.1 && offset.dx < 0.9) {
       _cursor = SystemMouseCursors.basic;
-      _resizeDirection = null;
     } else if (widget.isMiddleHeader) {
       _resizeDirection =
           offset.dx <= 0.1 ? ResizeDirection.left : ResizeDirection.right;
@@ -77,12 +76,13 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   }
 
   void _onMove(Offset delta, PointerStatus status) {
-    if (_resizeDirection == null || status == PointerStatus.up) {
+    if (status == PointerStatus.up) {
       widget.resizer?.setResizeTarget(null);
+      _resizeDirection = null;
       return;
     }
 
-    if (status == PointerStatus.down) {
+    if (status == PointerStatus.down && _resizeDirection != null) {
       widget.resizer?.setResizeTarget(
         ResizeTarget(
           key: widget.detail.columnKey,

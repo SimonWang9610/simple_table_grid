@@ -72,13 +72,13 @@ final class ExtentManager with TableCoordinatorMixin {
   ResizeTarget? _target;
 
   void setResizeTarget(ResizeTarget? target) {
+    if (_target == target) return;
     _target = target;
+    print('Resize target set to: $_target');
   }
 
   void resize(double delta) {
     if (_target == null) return;
-
-    print(_target);
 
     final direction = _target!.direction;
 
