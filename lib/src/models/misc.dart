@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/models/cell_detail.dart';
 
 typedef TableCellDetailBuilder<T extends CellDetail> = Widget Function(
   BuildContext context,
@@ -22,5 +21,17 @@ enum FocusStrategy {
 
 enum PointerStatus { up, down, move }
 
-typedef TableResizeTargetCallback<T extends TableKey> = void Function(
-    ResizeTarget<T>? target);
+class ResizeTarget<T extends TableKey> {
+  final T key;
+  final ResizeDirection direction;
+
+  const ResizeTarget({
+    required this.key,
+    required this.direction,
+  });
+
+  @override
+  String toString() {
+    return 'ResizeTarget(key: $key, direction: $direction)';
+  }
+}

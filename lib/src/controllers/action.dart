@@ -1,8 +1,30 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/components/table_focus_controller.dart';
+import 'package:simple_table_grid/src/components/focus_controller.dart';
 
-final class TableFocusManager with TableCoordinatorMixin {
+abstract base class TableFocuser {
+  void updateStrategies({
+    List<FocusStrategy>? selectionStrategies,
+    List<FocusStrategy>? hoveringStrategies,
+  });
+
+  void select({
+    List<RowKey>? rows,
+    List<ColumnKey>? columns,
+    List<CellKey>? cells,
+  });
+  void unselect({
+    List<RowKey>? rows,
+    List<ColumnKey>? columns,
+    List<CellKey>? cells,
+  });
+
+  void hoverOn({RowKey? row, ColumnKey? column});
+  void hoverOff({RowKey? row, ColumnKey? column});
+}
+
+final class TableFocusController extends TableFocuser
+    with TableControllerCoordinator {
   final _selectedRows = LineFocusController<RowKey>();
   final _selectedColumns = LineFocusController<ColumnKey>();
   final _selectedCells = CellFocusController();
@@ -13,7 +35,7 @@ final class TableFocusManager with TableCoordinatorMixin {
   final Set<FocusStrategy> _selectionStrategies = {};
   final Set<FocusStrategy> _hoveringStrategies = {};
 
-  TableFocusManager({
+  TableFocusController({
     List<FocusStrategy>? selectionStrategies,
     List<FocusStrategy>? hoveringStrategies,
   }) {
@@ -55,6 +77,27 @@ final class TableFocusManager with TableCoordinatorMixin {
     return updated && hasAnyHovering;
   }
 
+  @override
+  void updateStrategies({
+    List<FocusStrategy>? selectionStrategies,
+    List<FocusStrategy>? hoveringStrategies,
+  }) {
+    bool shouldNotify = false;
+
+    if (selectionStrategies != null) {
+      shouldNotify |= updateSelectionStrategy(selectionStrategies);
+    }
+
+    if (hoveringStrategies != null) {
+      shouldNotify |= updateHoveringStrategy(hoveringStrategies);
+    }
+
+    if (shouldNotify) {
+      notify();
+    }
+  }
+
+  @override
   void select({
     Iterable<RowKey>? rows,
     Iterable<ColumnKey>? columns,
@@ -73,6 +116,7 @@ final class TableFocusManager with TableCoordinatorMixin {
     }
   }
 
+  @override
   void unselect({
     Iterable<RowKey>? rows,
     Iterable<ColumnKey>? columns,
@@ -101,6 +145,7 @@ final class TableFocusManager with TableCoordinatorMixin {
     }
   }
 
+  @override
   void hoverOn({RowKey? row, ColumnKey? column}) {
     if (row != null && _hoveringStrategies.canHoverRow) {
       _hoveringRows.focus(row);
@@ -111,6 +156,7 @@ final class TableFocusManager with TableCoordinatorMixin {
     }
   }
 
+  @override
   void hoverOff({RowKey? row, ColumnKey? column}) {
     if (row != null) {
       _hoveringRows.unfocus(row);

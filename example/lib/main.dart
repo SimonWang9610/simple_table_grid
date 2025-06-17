@@ -91,14 +91,6 @@ class _MyAppState extends State<MyApp> {
         ),
         TextButton(
           onPressed: () {
-            _controller.removeRows(
-              [_controller.getRowKey(1)],
-            );
-          },
-          child: Text("Remove first row"),
-        ),
-        TextButton(
-          onPressed: () {
             _randomRemove(true, false);
           },
           child: Text("Remove first column"),
@@ -123,9 +115,9 @@ class _MyAppState extends State<MyApp> {
           IconButton(
             onPressed: () {
               if (detail.isPinned) {
-                _controller.unpinColumn(detail.columnKey);
+                _controller.columns.unpin(detail.columnKey);
               } else {
-                _controller.pinColumn(detail.columnKey);
+                _controller.columns.pin(detail.columnKey);
               }
             },
             icon: Icon(
@@ -139,9 +131,9 @@ class _MyAppState extends State<MyApp> {
     return InkWell(
       onTap: () {
         if (detail.isPinned) {
-          _controller.unpinColumn(detail.columnKey);
+          _controller.columns.unpin(detail.columnKey);
         } else {
-          _controller.pinColumn(detail.columnKey);
+          _controller.columns.pin(detail.columnKey);
         }
       },
       child: Container(
@@ -173,23 +165,23 @@ class _MyAppState extends State<MyApp> {
     return InkWell(
       onTap: () {
         if (!detail.selected) {
-          _controller.select(rows: [detail.rowKey]);
+          _controller.focuser.select(rows: [detail.rowKey]);
         } else {
-          _controller.unselect(rows: [detail.rowKey]);
+          _controller.focuser.unselect(rows: [detail.rowKey]);
         }
       },
       onLongPress: () {
         if (detail.isPinned) {
-          _controller.unpinRow(detail.rowKey);
+          _controller.rows.unpin(detail.rowKey);
         } else {
-          _controller.pinRow(detail.rowKey);
+          _controller.rows.pin(detail.rowKey);
         }
       },
       onHover: (value) {
         if (value) {
-          _controller.hoverOn(row: detail.rowKey);
+          _controller.focuser.hoverOn(row: detail.rowKey);
         } else {
-          _controller.hoverOff(row: detail.rowKey);
+          _controller.focuser.hoverOff(row: detail.rowKey);
         }
       },
       child: Container(
@@ -216,7 +208,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _addRows(int count) {
-    final columns = _controller.orderedColumns;
+    final columns = _controller.columns.ordered;
 
     final rows = List.generate(
       count,
@@ -224,33 +216,33 @@ class _MyAppState extends State<MyApp> {
         RowKey(UniqueKey()),
         {
           for (final column in columns)
-            column: 'Row ${_controller.dataCount + index}',
+            column: 'Row ${_controller.rows.dataCount + index}',
         },
       ),
     );
 
-    _controller.addRows(rows);
+    _controller.rows.addAll(rows);
   }
 
   void _randomRemove(bool row, bool column) {
     final rnd = Random();
 
-    final nextRow = rnd.nextInt(_controller.dataCount) + 1;
+    final nextRow = rnd.nextInt(_controller.rows.dataCount) + 1;
     print("Next row: $nextRow");
 
     final nextColumn = rnd.nextInt(_controller.columnCount);
 
-    final rowKey = _controller.getRowKey(nextRow);
-    final columnKey = _controller.getColumnKey(nextColumn);
+    final rowKey = _controller.finder.getRowKey(nextRow);
+    final columnKey = _controller.finder.getColumnKey(nextColumn);
 
     if (row) {
       print("Removing row: $rowKey");
-      _controller.removeRows([rowKey]);
+      _controller.rows.remove(rowKey!);
     }
 
     if (column) {
       print("Removing column: $columnKey");
-      _controller.removeColumn(columnKey);
+      _controller.columns.remove(columnKey);
     }
   }
 }

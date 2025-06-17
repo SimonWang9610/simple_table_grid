@@ -7,7 +7,7 @@ class HeaderWidget extends StatefulWidget {
   final EdgeInsets? padding;
   final ColumnHeaderDetail detail;
   final TableCellDetailBuilder<ColumnHeaderDetail> builder;
-  final TableResizer? resizer;
+  final TableSizer? sizer;
   final bool isMiddleHeader;
 
   const HeaderWidget({
@@ -16,7 +16,7 @@ class HeaderWidget extends StatefulWidget {
     this.padding,
     required this.detail,
     required this.builder,
-    this.resizer,
+    this.sizer,
     this.isMiddleHeader = true,
   });
 
@@ -49,8 +49,8 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     }
 
     return AutoCursorWidget(
-      onHover: widget.resizer != null ? _getCursor : null,
-      onMove: widget.resizer != null ? _onMove : null,
+      onHover: widget.sizer != null ? _getCursor : null,
+      onMove: widget.sizer != null ? _onMove : null,
       child: child,
     );
   }
@@ -77,20 +77,20 @@ class _HeaderWidgetState extends State<HeaderWidget> {
 
   void _onMove(Offset delta, PointerStatus status) {
     if (status == PointerStatus.up) {
-      widget.resizer?.setResizeTarget(null);
+      widget.sizer?.setResizeTarget(null);
       _resizeDirection = null;
       return;
     }
 
     if (status == PointerStatus.down && _resizeDirection != null) {
-      widget.resizer?.setResizeTarget(
+      widget.sizer?.setResizeTarget(
         ResizeTarget(
           key: widget.detail.columnKey,
           direction: _resizeDirection!,
         ),
       );
     } else {
-      widget.resizer?.resize(delta.dx);
+      widget.sizer?.resize(delta.dx);
     }
   }
 }

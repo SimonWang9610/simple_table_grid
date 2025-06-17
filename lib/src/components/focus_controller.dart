@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/src/models/key.dart';
 
-sealed class TableFocusController<T extends TableKey> with ChangeNotifier {
+sealed class FocusController<T extends TableKey> with ChangeNotifier {
   List<T> get focused;
 
   bool isFocused(T value);
@@ -15,8 +15,7 @@ sealed class TableFocusController<T extends TableKey> with ChangeNotifier {
   void reset();
 }
 
-final class LineFocusController<T extends TableKey>
-    extends TableFocusController<T> {
+final class LineFocusController<T extends TableKey> extends FocusController<T> {
   final Set<T> _focused = {};
 
   LineFocusController({
@@ -90,7 +89,7 @@ final class LineFocusController<T extends TableKey>
   }
 }
 
-final class CellFocusController extends TableFocusController<CellKey> {
+final class CellFocusController extends FocusController<CellKey> {
   final Set<CellKey> _focused = {};
 
   @override

@@ -50,14 +50,14 @@ class TableGrid extends StatelessWidget {
           pinnedColumnCount: controller.pinnedColumnCount,
           pinnedRowCount: controller.pinnedRowCount,
           rowExtentBuilder: (index) {
-            return controller.getRowExtent(index);
+            return controller.sizer.getRowExtent(index);
           },
           columnExtentBuilder: (index) {
-            final key = controller.getColumnKey(index);
-            return controller.getColumnExtent(key);
+            return controller.sizer.getColumnExtent(index);
           },
           builder: (_, vicinity) {
-            final listenable = controller.getCellFocusNotifier(vicinity);
+            final listenable =
+                controller.internal.getCellFocusNotifier(vicinity);
             return listenable == null
                 ? _buildCell(context, vicinity)
                 : ListenableBuilder(
@@ -80,7 +80,7 @@ class TableGrid extends StatelessWidget {
     final cellBorder = border.calculateBorder(rightEdge, bottomEdge);
     final padding = border.calculatePadding(rightEdge, bottomEdge);
 
-    final detail = controller.getCellDetail(vicinity);
+    final detail = controller.internal.getCellDetail(vicinity);
 
     return switch (detail) {
       ColumnHeaderDetail() => HeaderWidget(
@@ -90,7 +90,7 @@ class TableGrid extends StatelessWidget {
           padding: padding,
           detail: detail,
           builder: headerBuilder,
-          resizer: controller,
+          sizer: controller.sizer,
         ),
       TableCellDetail() => CellWidget(
           border: cellBorder,
