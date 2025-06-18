@@ -28,6 +28,7 @@ class _MyAppState extends State<MyApp> {
         .toList(),
     hoveringStrategies: [
       FocusStrategy.row,
+      FocusStrategy.column,
     ],
     selectionStrategies: [
       FocusStrategy.row,
@@ -55,11 +56,11 @@ class _MyAppState extends State<MyApp> {
           border: TableGridBorder(
             vertical: BorderSide(
               color: Colors.red,
-              width: 1,
+              width: 0.5,
             ),
             horizontal: BorderSide(
               color: Colors.black,
-              width: 1,
+              width: 0.5,
             ),
           ),
           builder: _buildCell,
@@ -100,44 +101,50 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget _buildColumn(BuildContext ctx, ColumnHeaderDetail detail) {
-    return Container(
-      color: detail.isPinned ? Colors.blue : Colors.yellow,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            detail.columnKey.id,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          IconButton(
-            onPressed: () {
-              if (detail.isPinned) {
-                _controller.columns.unpin(detail.columnKey);
-              } else {
-                _controller.columns.pin(detail.columnKey);
-              }
-            },
-            icon: Icon(
-              detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-            ),
-          ),
-        ],
-      ),
-    );
+    // return Container(
+    //   color: detail.isPinned ? Colors.blue : Colors.yellow,
+    //   child: Row(
+    //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    //     children: [
+    //       Text(
+    //         detail.columnKey.id,
+    //         style: const TextStyle(
+    //           fontSize: 16,
+    //           fontWeight: FontWeight.bold,
+    //         ),
+    //       ),
+    //       InkWell(
+    //         onTap: () {
+    //           if (detail.isPinned) {
+    //             _controller.columns.unpin(detail.columnKey);
+    //           } else {
+    //             _controller.columns.pin(detail.columnKey);
+    //           }
+    //         },
+    //         child: Icon(
+    //           detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+    //           size: 16,
+    //         ),
+    //       ),
+    //     ],
+    //   ),
+    // );
 
     return InkWell(
-      onTap: () {
-        if (detail.isPinned) {
-          _controller.columns.unpin(detail.columnKey);
+      onTap: () {},
+      onHover: (value) {
+        if (value) {
+          _controller.focuser.hoverOn(column: detail.columnKey);
         } else {
-          _controller.columns.pin(detail.columnKey);
+          _controller.focuser.hoverOff(column: detail.columnKey);
         }
       },
       child: Container(
-        color: detail.isPinned ? Colors.blue : Colors.yellow,
+        color: detail.isPinned
+            ? Colors.blue
+            : detail.hovering
+                ? Colors.grey
+                : Colors.yellow,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -148,8 +155,18 @@ class _MyAppState extends State<MyApp> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Icon(
-              detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            IconButton(
+              onPressed: () {
+                if (detail.isPinned) {
+                  _controller.columns.unpin(detail.columnKey);
+                } else {
+                  _controller.columns.pin(detail.columnKey);
+                }
+              },
+              icon: Icon(
+                detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                size: 16,
+              ),
             ),
           ],
         ),
