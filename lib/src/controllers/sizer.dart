@@ -1,5 +1,6 @@
 import 'package:simple_table_grid/simple_table_grid.dart' hide TableIndexFinder;
 import 'package:simple_table_grid/src/controllers/base.dart';
+import 'package:simple_table_grid/src/controllers/misc.dart';
 
 abstract base class TableSizer {
   void setRowExtent(int index, Extent extent);
@@ -16,7 +17,7 @@ abstract base class TableSizer {
 }
 
 final class TableExtentController extends TableSizer
-    with TableControllerCoordinator {
+    with TableControllerCoordinator, TableCursorDelegate {
   final TableIndexFinder finder;
 
   TableExtentController({
@@ -152,10 +153,10 @@ final class TableExtentController extends TableSizer
     final actualKey =
         direction == ResizeDirection.up ? finder.previousRow(rowKey) : rowKey;
 
-    if (actualKey == null) return;
+    final index = actualKey != null ? finder.getRowIndex(actualKey) : 0;
 
-    final index = finder.getRowIndex(actualKey);
     if (index == null) return;
+
     final extent = getRowExtent(index);
 
     final accepted = extent.accept(delta);

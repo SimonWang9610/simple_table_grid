@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:simple_table_grid/custom_render/auto_cursor_region.dart';
+import 'package:simple_table_grid/custom_render/drag_widget.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
+import 'package:simple_table_grid/src/controllers/misc.dart';
 
 class HeaderWidget extends StatefulWidget {
   final Border? border;
@@ -9,6 +11,7 @@ class HeaderWidget extends StatefulWidget {
   final TableCellDetailBuilder<ColumnHeaderDetail> builder;
   final TableSizer? sizer;
   final bool isMiddleHeader;
+  final bool enableDrag;
 
   const HeaderWidget({
     super.key,
@@ -18,6 +21,7 @@ class HeaderWidget extends StatefulWidget {
     required this.builder,
     this.sizer,
     this.isMiddleHeader = true,
+    this.enableDrag = true,
   });
 
   @override
@@ -25,12 +29,40 @@ class HeaderWidget extends StatefulWidget {
 }
 
 class _HeaderWidgetState extends State<HeaderWidget> {
-  MouseCursor _cursor = SystemMouseCursors.basic;
-  ResizeDirection? _resizeDirection;
+  late final ValueNotifier<bool> _canDrag =
+      ValueNotifier<bool>(widget.enableDrag);
+
+  TableCursorDelegate? get cursorDelegate =>
+      widget.sizer as TableCursorDelegate?;
+
+  @override
+  void dispose() {
+    _canDrag.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     Widget child = widget.builder(context, widget.detail);
+
+    if (widget.enableDrag && cursorDelegate != null) {
+      child = ValueListenableBuilder(
+        valueListenable: _canDrag,
+        builder: (_, canDrag, child) {
+          return IgnorePointer(
+            ignoring: !canDrag,
+            child: child,
+          );
+        },
+        child: DraggableCellWidget(
+          detail: widget.detail,
+          onAccept: (from, to) {},
+          onDragStarted: () => cursorDelegate?.setDragging(true),
+          onDragEnd: () => cursorDelegate?.setDragging(false),
+          child: child,
+        ),
+      );
+    }
 
     if (widget.padding != null) {
       child = Padding(
@@ -49,48 +81,28 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     }
 
     return AutoCursorWidget(
-      onHover: widget.sizer != null ? _getCursor : null,
-      onMove: widget.sizer != null ? _onMove : null,
+      onHover: (offset) {
+        final cursor = cursorDelegate?.getCursor(
+              offset: offset,
+              direction: Axis.horizontal,
+            ) ??
+            SystemMouseCursors.basic;
+
+        if (widget.enableDrag) {
+          _canDrag.value = cursor != SystemMouseCursors.resizeColumn &&
+              cursor != SystemMouseCursors.resizeRow;
+        }
+
+        return cursor;
+      },
+      onMove: (delta, status) {
+        cursorDelegate?.onCursorMove(
+          widget.detail.columnKey,
+          delta.dx,
+          status,
+        );
+      },
       child: child,
     );
-  }
-
-  MouseCursor _getCursor(Offset? offset) {
-    if (offset == null) {
-      _cursor = SystemMouseCursors.basic;
-      _resizeDirection = null;
-      return _cursor;
-    }
-
-    if (offset.dx > 0.1 && offset.dx < 0.9) {
-      _cursor = SystemMouseCursors.basic;
-    } else if (widget.isMiddleHeader) {
-      _resizeDirection =
-          offset.dx <= 0.1 ? ResizeDirection.left : ResizeDirection.right;
-      _cursor = SystemMouseCursors.resizeColumn;
-    } else {
-      _cursor = SystemMouseCursors.basic;
-    }
-
-    return _cursor;
-  }
-
-  void _onMove(Offset delta, PointerStatus status) {
-    if (status == PointerStatus.up) {
-      widget.sizer?.setResizeTarget(null);
-      _resizeDirection = null;
-      return;
-    }
-
-    if (status == PointerStatus.down && _resizeDirection != null) {
-      widget.sizer?.setResizeTarget(
-        ResizeTarget(
-          key: widget.detail.columnKey,
-          direction: _resizeDirection!,
-        ),
-      );
-    } else {
-      widget.sizer?.resize(delta.dx);
-    }
   }
 }

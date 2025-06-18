@@ -49,37 +49,46 @@ class _MyAppState extends State<MyApp> {
       appBar: AppBar(
         title: const Text('Custom Table Grid Example'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: TableGrid(
-          controller: _controller,
-          border: TableGridBorder(
-            vertical: BorderSide(
-              color: Colors.red,
-              width: 0.5,
-            ),
-            horizontal: BorderSide(
-              color: Colors.black,
-              width: 0.5,
-            ),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: Colors.black,
+            width: 2,
           ),
-          builder: _buildCell,
-          headerBuilder: _buildColumn,
-          // border: TableGridBorder(
-          //     // vertical: BorderSide(
-          //     //   color: Colors.red,
-          //     //   width: 2,
-          //     // ),
-          //     // horizontal: BorderSide(
-          //     //   color: Colors.black,
-          //     //   width: 2,
-          //     // ),
-          //     ),
-          // loadingBuilder: (ctx) {
-          //   return CircularProgressIndicator(
-          //     color: Colors.red,
-          //   );
-          // },
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TableGrid(
+            controller: _controller,
+            border: TableGridBorder(
+              vertical: BorderSide(
+                color: Colors.red,
+                width: 0.5,
+              ),
+              horizontal: BorderSide(
+                color: Colors.black,
+                width: 0.5,
+              ),
+            ),
+            builder: _buildCell,
+            headerBuilder: _buildColumn,
+            // border: TableGridBorder(
+            //     // vertical: BorderSide(
+            //     //   color: Colors.red,
+            //     //   width: 2,
+            //     // ),
+            //     // horizontal: BorderSide(
+            //     //   color: Colors.black,
+            //     //   width: 2,
+            //     // ),
+            //     ),
+            // loadingBuilder: (ctx) {
+            //   return CircularProgressIndicator(
+            //     color: Colors.red,
+            //   );
+            // },
+          ),
         ),
       ),
       persistentFooterAlignment: AlignmentDirectional.center,
@@ -143,8 +152,8 @@ class _MyAppState extends State<MyApp> {
         color: detail.isPinned
             ? Colors.blue
             : detail.hovering
-                ? Colors.grey
-                : Colors.yellow,
+                ? Colors.yellow
+                : Colors.transparent,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
