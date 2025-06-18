@@ -1,10 +1,10 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:simple_table_grid/custom_render/header_widget.dart';
 import 'package:simple_table_grid/custom_render/cell_widget.dart';
 
 import 'package:simple_table_grid/simple_table_grid.dart';
 
-class TableGrid extends StatelessWidget {
+class TableGrid extends StatefulWidget {
   final TableController controller;
   final ScrollController? horizontalScrollController;
   final ScrollController? verticalScrollController;
@@ -31,33 +31,58 @@ class TableGrid extends StatelessWidget {
   });
 
   @override
+  State<TableGrid> createState() => _TableGridState();
+}
+
+class _TableGridState extends State<TableGrid> {
+  ScrollController? _horizontalFallbackController;
+  ScrollController? _verticalFallbackController;
+
+  ScrollController get _effectiveHorizontalScrollController =>
+      widget.horizontalScrollController ??
+      (_horizontalFallbackController ??= ScrollController());
+
+  ScrollController get _effectiveVerticalScrollController =>
+      widget.verticalScrollController ??
+      (_verticalFallbackController ??= ScrollController());
+
+  @override
+  void dispose() {
+    _horizontalFallbackController?.dispose();
+    _verticalFallbackController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: controller,
+    final grid = ListenableBuilder(
+      listenable: widget.controller,
       builder: (_, __) {
         return TableGridView.builder(
           mainAxis: Axis.horizontal,
           horizontalDetails: ScrollableDetails.horizontal(
-            controller: horizontalScrollController,
-            physics: horizontalScrollPhysics ?? const ClampingScrollPhysics(),
+            controller: _effectiveHorizontalScrollController,
+            physics:
+                widget.horizontalScrollPhysics ?? const ClampingScrollPhysics(),
           ),
           verticalDetails: ScrollableDetails.vertical(
-            controller: verticalScrollController,
-            physics: verticalScrollPhysics ?? const ClampingScrollPhysics(),
+            controller: _effectiveVerticalScrollController,
+            physics:
+                widget.verticalScrollPhysics ?? const ClampingScrollPhysics(),
           ),
-          columnCount: controller.columnCount,
-          rowCount: controller.rowCount,
-          pinnedColumnCount: controller.pinnedColumnCount,
-          pinnedRowCount: controller.pinnedRowCount,
+          columnCount: widget.controller.columnCount,
+          rowCount: widget.controller.rowCount,
+          pinnedColumnCount: widget.controller.pinnedColumnCount,
+          pinnedRowCount: widget.controller.pinnedRowCount,
           rowExtentBuilder: (index) {
-            return controller.sizer.getRowExtent(index);
+            return widget.controller.sizer.getRowExtent(index);
           },
           columnExtentBuilder: (index) {
-            return controller.sizer.getColumnExtent(index);
+            return widget.controller.sizer.getColumnExtent(index);
           },
           builder: (_, vicinity) {
             final listenable =
-                controller.internal.getCellFocusNotifier(vicinity);
+                widget.controller.internal.getCellFocusNotifier(vicinity);
             return listenable == null
                 ? _buildCell(context, vicinity)
                 : ListenableBuilder(
@@ -68,6 +93,16 @@ class TableGrid extends StatelessWidget {
         );
       },
     );
+
+    final bar = Scrollbar(
+      controller: _effectiveVerticalScrollController,
+      child: grid,
+    );
+
+    return Scrollbar(
+      controller: _effectiveHorizontalScrollController,
+      child: bar,
+    );
   }
 
   Widget _buildCell(
@@ -77,37 +112,38 @@ class TableGrid extends StatelessWidget {
     final rightEdge = _isRightEdge(vicinity.column);
     final bottomEdge = _isBottomEdge(vicinity.row);
 
-    final cellBorder = border.calculateBorder(rightEdge, bottomEdge);
-    final padding = border.calculatePadding(rightEdge, bottomEdge);
+    final cellBorder = widget.border.calculateBorder(rightEdge, bottomEdge);
+    final padding = widget.border.calculatePadding(rightEdge, bottomEdge);
 
-    final detail = controller.internal.getCellDetail(vicinity);
+    final detail = widget.controller.internal.getCellDetail(vicinity);
 
     return switch (detail) {
       ColumnHeaderDetail() => HeaderWidget(
-          isMiddleHeader: vicinity.column > 0 &&
-              vicinity.column < controller.columnCount - 1,
           border: cellBorder,
           padding: padding,
           detail: detail,
-          builder: headerBuilder,
-          sizer: controller.sizer,
+          builder: widget.headerBuilder,
+          sizer: widget.controller.sizer,
+          onReorder: (from, to) {
+            widget.controller.columns.reorder(from.columnKey, to.columnKey);
+          },
         ),
       TableCellDetail() => CellWidget(
           border: cellBorder,
           padding: padding,
           detail: detail,
-          builder: builder,
+          builder: widget.builder,
         ),
     };
   }
 
   bool _isBottomEdge(int row) {
-    return row == controller.pinnedRowCount - 1 ||
-        row == controller.rowCount - 1;
+    return row == widget.controller.pinnedRowCount - 1 ||
+        row == widget.controller.rowCount - 1;
   }
 
   bool _isRightEdge(int column) {
-    return column == controller.columnCount - 1 ||
-        column == controller.pinnedColumnCount - 1;
+    return column == widget.controller.columnCount - 1 ||
+        column == widget.controller.pinnedColumnCount - 1;
   }
 }

@@ -110,34 +110,34 @@ class _MyAppState extends State<MyApp> {
   }
 
   Widget _buildColumn(BuildContext ctx, ColumnHeaderDetail detail) {
-    // return Container(
-    //   color: detail.isPinned ? Colors.blue : Colors.yellow,
-    //   child: Row(
-    //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    //     children: [
-    //       Text(
-    //         detail.columnKey.id,
-    //         style: const TextStyle(
-    //           fontSize: 16,
-    //           fontWeight: FontWeight.bold,
-    //         ),
-    //       ),
-    //       InkWell(
-    //         onTap: () {
-    //           if (detail.isPinned) {
-    //             _controller.columns.unpin(detail.columnKey);
-    //           } else {
-    //             _controller.columns.pin(detail.columnKey);
-    //           }
-    //         },
-    //         child: Icon(
-    //           detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-    //           size: 16,
-    //         ),
-    //       ),
-    //     ],
-    //   ),
-    // );
+    return Container(
+      color: detail.isPinned ? Colors.blue : Colors.yellow,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            detail.columnKey.id,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              if (detail.isPinned) {
+                _controller.columns.unpin(detail.columnKey);
+              } else {
+                _controller.columns.pin(detail.columnKey);
+              }
+            },
+            icon: Icon(
+              detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+              // size: 16,
+            ),
+          ),
+        ],
+      ),
+    );
 
     return InkWell(
       onTap: () {},

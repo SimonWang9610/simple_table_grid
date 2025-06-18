@@ -4,14 +4,18 @@ import 'package:simple_table_grid/custom_render/drag_widget.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 
+typedef TableCellReorderCallback<T extends CellDetail> = void Function(
+  T from,
+  T to,
+);
+
 class HeaderWidget extends StatefulWidget {
   final Border? border;
   final EdgeInsets? padding;
   final ColumnHeaderDetail detail;
   final TableCellDetailBuilder<ColumnHeaderDetail> builder;
   final TableSizer? sizer;
-  final bool isMiddleHeader;
-  final bool enableDrag;
+  final TableCellReorderCallback<ColumnHeaderDetail>? onReorder;
 
   const HeaderWidget({
     super.key,
@@ -20,8 +24,7 @@ class HeaderWidget extends StatefulWidget {
     required this.detail,
     required this.builder,
     this.sizer,
-    this.isMiddleHeader = true,
-    this.enableDrag = true,
+    this.onReorder,
   });
 
   @override
@@ -30,7 +33,7 @@ class HeaderWidget extends StatefulWidget {
 
 class _HeaderWidgetState extends State<HeaderWidget> {
   late final ValueNotifier<bool> _canDrag =
-      ValueNotifier<bool>(widget.enableDrag);
+      ValueNotifier<bool>(widget.onReorder != null);
 
   TableCursorDelegate? get cursorDelegate =>
       widget.sizer as TableCursorDelegate?;
@@ -45,7 +48,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   Widget build(BuildContext context) {
     Widget child = widget.builder(context, widget.detail);
 
-    if (widget.enableDrag && cursorDelegate != null) {
+    if (widget.onReorder != null && cursorDelegate != null) {
       child = ValueListenableBuilder(
         valueListenable: _canDrag,
         builder: (_, canDrag, child) {
@@ -56,7 +59,8 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         },
         child: DraggableCellWidget(
           detail: widget.detail,
-          onAccept: (from, to) {},
+          feedback: _buildFeedback(context, child),
+          onAccept: widget.onReorder!,
           onDragStarted: () => cursorDelegate?.setDragging(true),
           onDragEnd: () => cursorDelegate?.setDragging(false),
           child: child,
@@ -88,7 +92,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
             ) ??
             SystemMouseCursors.basic;
 
-        if (widget.enableDrag) {
+        if (widget.onReorder != null) {
           _canDrag.value = cursor != SystemMouseCursors.resizeColumn &&
               cursor != SystemMouseCursors.resizeRow;
         }
@@ -103,6 +107,23 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         );
       },
       child: child,
+    );
+  }
+
+  Widget _buildFeedback(BuildContext context, Widget child) {
+    final box = context.findRenderObject() as RenderBox?;
+
+    if (box == null) return child;
+
+    final size = box.size;
+
+    return SizedBox(
+      width: size.width,
+      height: size.height,
+      child: Material(
+        color: Colors.transparent,
+        child: child,
+      ),
     );
   }
 }

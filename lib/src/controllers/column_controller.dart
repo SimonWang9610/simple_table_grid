@@ -120,10 +120,12 @@ final class TableHeaderController extends TableColumnController
       _nonPinnedOrdering.reorder(from, to);
     } else if (fromPinned && !toPinned) {
       _pinnedOrdering.remove(from);
-      _nonPinnedOrdering.add(to);
+      _nonPinnedOrdering.add(from);
+      _nonPinnedOrdering.reorder(from, to);
     } else if (!fromPinned && toPinned) {
       _nonPinnedOrdering.remove(from);
-      _pinnedOrdering.add(to);
+      _pinnedOrdering.add(from);
+      _pinnedOrdering.reorder(from, to);
     }
 
     notify();
