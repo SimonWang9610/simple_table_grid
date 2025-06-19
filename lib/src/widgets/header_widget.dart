@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:simple_table_grid/custom_render/auto_cursor_region.dart';
-import 'package:simple_table_grid/custom_render/drag_widget.dart';
+import 'package:simple_table_grid/src/widgets/auto_cursor_region.dart';
+import 'package:simple_table_grid/src/widgets/drag_widget.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 

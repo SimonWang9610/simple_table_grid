@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:simple_table_grid/custom_render/header_widget.dart';
-import 'package:simple_table_grid/custom_render/cell_widget.dart';
+import 'package:simple_table_grid/src/widgets/header_widget.dart';
+import 'package:simple_table_grid/src/widgets/cell_widget.dart';
 
 import 'package:simple_table_grid/simple_table_grid.dart';
 
