@@ -170,8 +170,6 @@ final class TableExtentController extends TableSizer
 
     final index = actualKey != null ? finder.getRowIndex(actualKey) : 0;
 
-    if (index == null) return;
-
     final extent = getRowExtent(index);
 
     final accepted = extent.accept(delta);

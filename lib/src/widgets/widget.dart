@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:simple_table_grid/src/widgets/header_widget.dart';
-import 'package:simple_table_grid/src/widgets/cell_widget.dart';
+import 'package:simple_table_grid/src/controllers/misc.dart';
+import 'package:simple_table_grid/src/widgets/cell_detail_widget.dart';
 
 import 'package:simple_table_grid/simple_table_grid.dart';
 
@@ -13,8 +13,28 @@ class TableGrid extends StatefulWidget {
   final TableCellDetailBuilder<TableCellDetail> builder;
   final TableCellDetailBuilder<TableHeaderDetail> headerBuilder;
   final TableGridBorder border;
+
+  /// Whether to allow resizing of columns.
+  ///
+  /// If the extent of the dragging column does not accept the delta,
+  /// it will not change the extent.
+  ///
+  /// Typically, the column extent must be [Extent.range] to accept the delta.
   final bool resizeColumn;
+
+  /// Whether to allow resizing of rows.
+  ///
+  /// If the extent of the dragging row does not accept the delta,
+  /// it will not change the extent.
+  ///
+  /// Typically, the row extent must be [Extent.range] to accept the delta.
   final bool resizeRow;
+
+  /// Whether to allow reordering of columns by dragging.
+  final bool reorderColumn;
+
+  /// Whether to allow reordering of rows by dragging.
+  final bool reorderRow;
 
   const TableGrid({
     super.key,
@@ -27,7 +47,9 @@ class TableGrid extends StatefulWidget {
     this.verticalScrollController,
     this.verticalScrollPhysics,
     this.resizeColumn = true,
+    this.reorderColumn = true,
     this.resizeRow = false,
+    this.reorderRow = false,
   });
 
   @override
@@ -118,21 +140,29 @@ class _TableGridState extends State<TableGrid> {
     final detail = widget.controller.internal.getCellDetail(vicinity);
 
     return switch (detail) {
-      TableHeaderDetail() => HeaderWidget(
+      TableHeaderDetail() => CellDetailWidget(
           border: cellBorder,
           padding: padding,
           detail: detail,
           builder: widget.headerBuilder,
-          sizer: widget.controller.sizer,
+          dragEnabled: widget.reorderColumn,
+          resizeEnabled: widget.resizeColumn,
+          cursorDelegate: widget.controller.sizer as TableCursorDelegate,
           onReorder: (from, to) {
             widget.controller.columns.reorder(from.columnKey, to.columnKey);
           },
         ),
-      TableCellDetail() => CellWidget(
+      TableCellDetail() => CellDetailWidget(
           border: cellBorder,
           padding: padding,
           detail: detail,
+          dragEnabled: widget.reorderRow,
+          resizeEnabled: widget.resizeRow,
+          cursorDelegate: widget.controller.sizer as TableCursorDelegate,
           builder: widget.builder,
+          onReorder: (from, to) {
+            widget.controller.rows.reorder(from.rowKey, to.rowKey);
+          },
         ),
     };
   }

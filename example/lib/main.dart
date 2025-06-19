@@ -33,7 +33,7 @@ class _MyAppState extends State<MyApp> {
     selectionStrategies: [
       FocusStrategy.row,
     ],
-    defaultRowExtent: Extent.fixed(60),
+    defaultRowExtent: Extent.range(pixels: 80, min: 60, max: 120),
     defaultColumnExtent: Extent.range(pixels: 100, min: 60),
   );
 
@@ -61,6 +61,8 @@ class _MyAppState extends State<MyApp> {
           padding: const EdgeInsets.all(8.0),
           child: TableGrid(
             controller: _controller,
+            reorderRow: true,
+            resizeRow: true,
             border: TableGridBorder(
               vertical: BorderSide(
                 color: Colors.red,
@@ -122,6 +124,7 @@ class _MyAppState extends State<MyApp> {
     return Container(
       color: detail.isPinned ? Colors.blue : Colors.yellow,
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Expanded(
             child: Text(
@@ -224,28 +227,49 @@ class _MyAppState extends State<MyApp> {
 
     final name = data != null ? data.toString() : "N/A";
 
+    return Container(
+      decoration: BoxDecoration(
+        color: detail.hovering ? Colors.grey : Colors.white,
+        border: detail.selected
+            ? Border.all(
+                color: Colors.green,
+                width: 2,
+              )
+            : null,
+      ),
+      child: Center(
+        child: Text(
+          "$name, ${detail.columnKey.id}",
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+
     return InkWell(
-      onTap: () {
-        if (!detail.selected) {
-          _controller.focuser.select(rows: [detail.rowKey]);
-        } else {
-          _controller.focuser.unselect(rows: [detail.rowKey]);
-        }
-      },
-      onLongPress: () {
-        if (detail.isPinned) {
-          _controller.rows.unpin(detail.rowKey);
-        } else {
-          _controller.rows.pin(detail.rowKey);
-        }
-      },
-      onHover: (value) {
-        if (value) {
-          _controller.focuser.hoverOn(row: detail.rowKey);
-        } else {
-          _controller.focuser.hoverOff(row: detail.rowKey);
-        }
-      },
+      // onTap: () {
+      //   if (!detail.selected) {
+      //     _controller.focuser.select(rows: [detail.rowKey]);
+      //   } else {
+      //     _controller.focuser.unselect(rows: [detail.rowKey]);
+      //   }
+      // },
+      // onLongPress: () {
+      //   if (detail.isPinned) {
+      //     _controller.rows.unpin(detail.rowKey);
+      //   } else {
+      //     _controller.rows.pin(detail.rowKey);
+      //   }
+      // },
+      // onHover: (value) {
+      //   if (value) {
+      //     _controller.focuser.hoverOn(row: detail.rowKey);
+      //   } else {
+      //     _controller.focuser.hoverOff(row: detail.rowKey);
+      //   }
+      // },
       child: Container(
         decoration: BoxDecoration(
           color: detail.hovering ? Colors.grey : Colors.white,

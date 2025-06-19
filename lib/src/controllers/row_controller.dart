@@ -54,15 +54,17 @@ abstract base class TableRowController {
   bool get alwaysShowHeader;
 
   /// Convert a row index to a cell row index.
-  int toDataRow(int row) {
-    return row - 1;
+  ///
+  /// [vicinityRow] is the index of the row in the table including the header row.
+  int toDataRow(int vicinityRow) {
+    return vicinityRow - 1;
   }
 
   /// Convert a cell row index to a vicinity row index.
-  /// If [alwaysShowHeader] is true, the given [cellRow] will be incremented by 1 to differentiate
-  /// between the header row and the data row.
-  int toVicinityRow(int cellRow) {
-    return cellRow + 1;
+  ///
+  /// [dataRow] is the index of the row in the table excluding the header row.
+  int toVicinityRow(int dataRow) {
+    return dataRow + 1;
   }
 
   /// Check if the given [vicinityRow] is a column header.
@@ -367,6 +369,9 @@ final class TableDataController extends TableRowController
     return null; // Key not found in either ordering
   }
 
+  /// Get the row key at the given index in the data source.
+  ///
+  /// [index] is the index of the row in the table including the header row.
   RowKey getRowKey(int index) {
     final dateIndex = toDataRow(index);
 
@@ -387,9 +392,12 @@ final class TableDataController extends TableRowController
     return key!;
   }
 
-  int? getRowIndex(RowKey key) {
+  /// Get the index of the row in the table including the header row.
+  ///
+  /// if [key] is not in the data source, we will treat it as the header row and return 0.
+  int getRowIndex(RowKey key) {
     if (!_rows.containsKey(key)) {
-      return alwaysShowHeader ? 0 : null;
+      return 0;
     }
 
     int? index;
@@ -405,7 +413,7 @@ final class TableDataController extends TableRowController
       "Row key $key is not in the data source, cannot get index",
     );
 
-    return index != null ? toVicinityRow(index) : null;
+    return toVicinityRow(index!);
   }
 
   dynamic getCellData(RowKey rowKey, ColumnKey columnKey) {
