@@ -44,35 +44,35 @@ abstract base class TableRowController {
   /// If [from] and [to] are the same, nothing will happen.
   void reorder(RowKey from, RowKey to);
 
-  /// Set the visibility of the header row.
-  /// If false, the header row will not be shown.
-  /// If true, the header row will always be shown.
+  /// If always pinning the header row.
+  ///
+  /// if false and no other data rows are pinned, the header row will not be pinned.
+  ///
+  /// If there are pinned data rows, the header row will always be pinned.
   void setHeaderVisibility(bool alwaysShowHeader);
 
   bool get alwaysShowHeader;
 
   /// Convert a row index to a cell row index.
-  /// If [alwaysShowHeader] is true, the given [row] will be decremented by 1 to differentiate
-  /// between the header row and the data row.
-  int toCellRow(int row) {
-    return alwaysShowHeader ? row - 1 : row;
+  int toDataRow(int row) {
+    return row - 1;
   }
 
   /// Convert a cell row index to a vicinity row index.
   /// If [alwaysShowHeader] is true, the given [cellRow] will be incremented by 1 to differentiate
   /// between the header row and the data row.
   int toVicinityRow(int cellRow) {
-    return alwaysShowHeader ? cellRow + 1 : cellRow;
+    return cellRow + 1;
   }
 
   /// Check if the given [vicinityRow] is a column header.
   /// If [alwaysShowHeader] is true, the header row is always at index 0.
   /// If false, it will always return false as there is no header row.
-  bool isColumnHeader(int vicinityRow) {
-    return alwaysShowHeader ? vicinityRow == 0 : false;
+  bool isHeaderRow(int vicinityRow) {
+    return vicinityRow == 0;
   }
 
-  /// The count of rows including the header row if [alwaysShowHeader] is true.
+  /// The count of rows including the header row
   int get count;
 
   /// The count of pinned rows including the header row if [alwaysShowHeader] is true.
@@ -116,7 +116,7 @@ final class TableDataController extends TableRowController
   int get dataCount => _rows.length;
 
   @override
-  int get count => dataCount + (_alwaysShowHeader ? 1 : 0);
+  int get count => dataCount + 1;
 
   bool _alwaysShowHeader;
 
@@ -138,7 +138,12 @@ final class TableDataController extends TableRowController
       _pinnedRowCount <= count,
       "Pinned rows $_pinnedRowCount must be less than or equal to row count $count",
     );
-    return alwaysShowHeader ? _pinnedRowCount + 1 : _pinnedRowCount;
+
+    if (_pinnedRowCount == 0) {
+      return alwaysShowHeader ? 1 : 0;
+    }
+
+    return _pinnedRowCount + 1;
   }
 
   @override
@@ -363,7 +368,7 @@ final class TableDataController extends TableRowController
   }
 
   RowKey getRowKey(int index) {
-    final dateIndex = toCellRow(index);
+    final dateIndex = toDataRow(index);
 
     assert(
       dateIndex >= 0 && dateIndex < dataCount,

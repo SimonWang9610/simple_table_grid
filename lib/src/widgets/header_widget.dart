@@ -12,10 +12,10 @@ typedef TableCellReorderCallback<T extends CellDetail> = void Function(
 class HeaderWidget extends StatefulWidget {
   final Border? border;
   final EdgeInsets? padding;
-  final ColumnHeaderDetail detail;
-  final TableCellDetailBuilder<ColumnHeaderDetail> builder;
+  final TableHeaderDetail detail;
+  final TableCellDetailBuilder<TableHeaderDetail> builder;
   final TableSizer? sizer;
-  final TableCellReorderCallback<ColumnHeaderDetail>? onReorder;
+  final TableCellReorderCallback<TableHeaderDetail>? onReorder;
 
   const HeaderWidget({
     super.key,

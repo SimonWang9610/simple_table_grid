@@ -153,7 +153,7 @@ final class _ControllerImpl extends TableController
 
   @override
   Listenable? getCellFocusNotifier(ChildVicinity vicinity) {
-    if (data.isColumnHeader(vicinity.row)) {
+    if (data.isHeaderRow(vicinity.row)) {
       return focus.columnFocusNotifier;
     } else {
       return focus.cellFocusNotifier;
@@ -164,8 +164,8 @@ final class _ControllerImpl extends TableController
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity) {
     final columnKey = getColumnKey(vicinity.column);
 
-    if (data.isColumnHeader(vicinity.row)) {
-      return ColumnHeaderDetail(
+    if (data.isHeaderRow(vicinity.row)) {
+      return TableHeaderDetail(
         columnKey: columnKey,
         isPinned: isColumnPinned(vicinity.column),
         selected: focus.isColumnSelected(columnKey),

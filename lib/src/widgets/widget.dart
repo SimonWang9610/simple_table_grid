@@ -11,7 +11,7 @@ class TableGrid extends StatefulWidget {
   final ScrollPhysics? horizontalScrollPhysics;
   final ScrollPhysics? verticalScrollPhysics;
   final TableCellDetailBuilder<TableCellDetail> builder;
-  final TableCellDetailBuilder<ColumnHeaderDetail> headerBuilder;
+  final TableCellDetailBuilder<TableHeaderDetail> headerBuilder;
   final TableGridBorder border;
   final bool resizeColumn;
   final bool resizeRow;
@@ -118,7 +118,7 @@ class _TableGridState extends State<TableGrid> {
     final detail = widget.controller.internal.getCellDetail(vicinity);
 
     return switch (detail) {
-      ColumnHeaderDetail() => HeaderWidget(
+      TableHeaderDetail() => HeaderWidget(
           border: cellBorder,
           padding: padding,
           detail: detail,

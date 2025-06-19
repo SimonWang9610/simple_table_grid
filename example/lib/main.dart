@@ -105,13 +105,20 @@ class _MyAppState extends State<MyApp> {
           },
           child: Text("Remove first column"),
         ),
+        TextButton(
+          onPressed: () {
+            _controller.rows
+                .setHeaderVisibility(!_controller.rows.alwaysShowHeader);
+          },
+          child: Text("Toggle header pinning"),
+        ),
       ],
     );
   }
 
   bool _ascending = true;
 
-  Widget _buildColumn(BuildContext ctx, ColumnHeaderDetail detail) {
+  Widget _buildColumn(BuildContext ctx, TableHeaderDetail detail) {
     return Container(
       color: detail.isPinned ? Colors.blue : Colors.yellow,
       child: Row(
