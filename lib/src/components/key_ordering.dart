@@ -201,7 +201,7 @@ class QuickOrdering<T extends TableKey> extends KeyOrdering<T> {
         sorted.add(key);
       }
     }
-    return List.unmodifiable(sorted);
+    return sorted;
   }
 
   @override
@@ -312,7 +312,7 @@ class EfficientOrdering<T extends TableKey> extends KeyOrdering<T> {
   }
 
   @override
-  List<T> get keys => List.unmodifiable(_keys);
+  List<T> get keys => List.of(_keys);
 
   @override
   T? get firstKey => _keys.isNotEmpty ? _keys.first : null;

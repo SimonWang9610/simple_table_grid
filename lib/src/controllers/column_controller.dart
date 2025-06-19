@@ -2,20 +2,42 @@ import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/key_ordering.dart';
 
 abstract base class TableColumnController {
+  /// Adds a list of columns to the controller.
+  /// If a column already exists, it will be ignored.
+  /// Notifies listeners if any new columns were added.
   void addAll(List<ColumnKey> columns);
+
+  /// Adds a single column to the controller.
   void add(ColumnKey column);
 
+  /// Removes a list of columns from the controller.
+  /// Notifies listeners if any columns were removed.
+  /// If a column does not exist, it will be ignored.
   void removeAll(List<ColumnKey> columns);
+
+  /// Removes a single column from the controller.
   void remove(ColumnKey column);
 
+  /// Pins a column to the end of the pinned columns.
   void pin(ColumnKey column);
+
+  /// Unpins a column, moving it to the start of the non-pinned columns.
   void unpin(ColumnKey column);
 
+  /// Reorders a column from one position to another.
+  ///
+  /// If the index of [from] is less than the index of [to], [from] will come after [to].
+  /// If the index of [from] is greater than the index of [to], [from] will come before [to].
+  /// If [from] and [to] are the same, nothing will happen.
   void reorder(ColumnKey from, ColumnKey to);
 
+  /// the number of columns in the controller, including pinned and non-pinned.
   int get count;
+
+  /// the number of pinned columns in the controller.
   int get pinnedCount;
 
+  /// Returns the current ordering of columns.
   List<ColumnKey> get ordered;
 }
 

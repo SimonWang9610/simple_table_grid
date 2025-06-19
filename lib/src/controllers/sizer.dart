@@ -3,16 +3,31 @@ import 'package:simple_table_grid/src/controllers/base.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 
 abstract base class TableSizer {
+  /// set the extent at the given [index] for the row.
   void setRowExtent(int index, Extent extent);
+
+  /// get the extent at the given [index] for the row.
   Extent getRowExtent(int index);
 
+  /// set the extent for the column with the given [key].
   void setColumnExtent(ColumnKey key, Extent extent);
+
+  /// get the extent for the column with the given [index].
   Extent getColumnExtent(int index);
 
+  /// get the extent for the column with the given [key].
   Map<int, Extent> get rowExtents;
+
+  /// get the extents for the columns with the given [key].
   Map<ColumnKey, Extent> get columnExtents;
 
+  /// Resize the [ResizeTarget] set by [setResizeTarget] by the given [delta].
+  ///
+  /// If the [ResizeTarget] is null, this method does nothing.
+  /// If [ResizeTarget]'s extent does not accept the [delta], it will not change the extent.
   void resize(double delta);
+
+  /// Set the [ResizeTarget] to [resize] on the targeted column or row.
   void setResizeTarget(ResizeTarget? target);
 }
 

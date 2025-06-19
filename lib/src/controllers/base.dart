@@ -1,5 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
+import 'package:simple_table_grid/src/controllers/column_controller.dart';
+import 'package:simple_table_grid/src/controllers/focuser.dart';
+import 'package:simple_table_grid/src/controllers/row_controller.dart';
+import 'package:simple_table_grid/src/controllers/sizer.dart';
 
 abstract base class TableController with ChangeNotifier {
   TableRowController get rows;

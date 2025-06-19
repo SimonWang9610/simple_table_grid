@@ -109,17 +109,20 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  bool _ascending = true;
+
   Widget _buildColumn(BuildContext ctx, ColumnHeaderDetail detail) {
     return Container(
       color: detail.isPinned ? Colors.blue : Colors.yellow,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            detail.columnKey.id,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: Text(
+              detail.columnKey.id,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           IconButton(
@@ -132,9 +135,35 @@ class _MyAppState extends State<MyApp> {
             },
             icon: Icon(
               detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-              // size: 16,
+              size: 16,
             ),
           ),
+          IconButton(
+            onPressed: () {
+              _ascending = !_ascending;
+
+              _controller.rows.performSort(
+                compare: (a, b) {
+                  final aCell = a[detail.columnKey];
+                  final bCell = b[detail.columnKey];
+
+                  if (aCell == null || bCell == null) {
+                    return -1; // Handle null values gracefully
+                  }
+
+                  if (_ascending) {
+                    return aCell.toString().compareTo(bCell.toString());
+                  } else {
+                    return bCell.toString().compareTo(aCell.toString());
+                  }
+                },
+              );
+            },
+            icon: Icon(
+              Icons.arrow_upward,
+              size: 16,
+            ),
+          )
         ],
       ),
     );
