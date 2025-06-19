@@ -37,8 +37,8 @@ sealed class CellDetail {
   }
 }
 
-final class ColumnHeaderDetail extends CellDetail {
-  const ColumnHeaderDetail({
+final class TableHeaderDetail extends CellDetail {
+  const TableHeaderDetail({
     required super.columnKey,
     super.isPinned = false,
     super.selected = false,
@@ -46,7 +46,7 @@ final class ColumnHeaderDetail extends CellDetail {
   });
 
   @override
-  bool operator ==(covariant ColumnHeaderDetail other) {
+  bool operator ==(covariant TableHeaderDetail other) {
     if (identical(this, other)) return true;
 
     return other.columnKey == columnKey &&
@@ -64,7 +64,7 @@ final class ColumnHeaderDetail extends CellDetail {
 
   @override
   String toString() {
-    return 'ColumnHeaderDetail(columnKey: $columnKey, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
+    return 'TableHeaderDetail(columnKey: $columnKey, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
   }
 }
 

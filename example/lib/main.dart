@@ -28,11 +28,12 @@ class _MyAppState extends State<MyApp> {
         .toList(),
     hoveringStrategies: [
       FocusStrategy.row,
+      FocusStrategy.column,
     ],
     selectionStrategies: [
       FocusStrategy.row,
     ],
-    defaultRowExtent: Extent.fixed(60),
+    defaultRowExtent: Extent.range(pixels: 80, min: 60, max: 120),
     defaultColumnExtent: Extent.range(pixels: 100, min: 60),
   );
 
@@ -48,37 +49,48 @@ class _MyAppState extends State<MyApp> {
       appBar: AppBar(
         title: const Text('Custom Table Grid Example'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: TableGrid(
-          controller: _controller,
-          border: TableGridBorder(
-            vertical: BorderSide(
-              color: Colors.red,
-              width: 1,
-            ),
-            horizontal: BorderSide(
-              color: Colors.black,
-              width: 1,
-            ),
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: Colors.black,
+            width: 2,
           ),
-          builder: _buildCell,
-          headerBuilder: _buildColumn,
-          // border: TableGridBorder(
-          //     // vertical: BorderSide(
-          //     //   color: Colors.red,
-          //     //   width: 2,
-          //     // ),
-          //     // horizontal: BorderSide(
-          //     //   color: Colors.black,
-          //     //   width: 2,
-          //     // ),
-          //     ),
-          // loadingBuilder: (ctx) {
-          //   return CircularProgressIndicator(
-          //     color: Colors.red,
-          //   );
-          // },
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TableGrid(
+            controller: _controller,
+            reorderRow: true,
+            resizeRow: true,
+            border: TableGridBorder(
+              vertical: BorderSide(
+                color: Colors.red,
+                width: 0.5,
+              ),
+              horizontal: BorderSide(
+                color: Colors.black,
+                width: 0.5,
+              ),
+            ),
+            builder: _buildCell,
+            headerBuilder: _buildColumn,
+            // border: TableGridBorder(
+            //     // vertical: BorderSide(
+            //     //   color: Colors.red,
+            //     //   width: 2,
+            //     // ),
+            //     // horizontal: BorderSide(
+            //     //   color: Colors.black,
+            //     //   width: 2,
+            //     // ),
+            //     ),
+            // loadingBuilder: (ctx) {
+            //   return CircularProgressIndicator(
+            //     color: Colors.red,
+            //   );
+            // },
+          ),
         ),
       ),
       persistentFooterAlignment: AlignmentDirectional.center,
@@ -95,21 +107,32 @@ class _MyAppState extends State<MyApp> {
           },
           child: Text("Remove first column"),
         ),
+        TextButton(
+          onPressed: () {
+            _controller.rows
+                .setHeaderVisibility(!_controller.rows.alwaysShowHeader);
+          },
+          child: Text("Toggle header pinning"),
+        ),
       ],
     );
   }
 
-  Widget _buildColumn(BuildContext ctx, ColumnHeaderDetail detail) {
+  bool _ascending = true;
+
+  Widget _buildColumn(BuildContext ctx, TableHeaderDetail detail) {
     return Container(
       color: detail.isPinned ? Colors.blue : Colors.yellow,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            detail.columnKey.id,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: Text(
+              detail.columnKey.id,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           IconButton(
@@ -122,22 +145,54 @@ class _MyAppState extends State<MyApp> {
             },
             icon: Icon(
               detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+              size: 16,
             ),
           ),
+          IconButton(
+            onPressed: () {
+              _ascending = !_ascending;
+
+              _controller.rows.performSort(
+                compare: (a, b) {
+                  final aCell = a[detail.columnKey];
+                  final bCell = b[detail.columnKey];
+
+                  if (aCell == null || bCell == null) {
+                    return -1; // Handle null values gracefully
+                  }
+
+                  if (_ascending) {
+                    return aCell.toString().compareTo(bCell.toString());
+                  } else {
+                    return bCell.toString().compareTo(aCell.toString());
+                  }
+                },
+              );
+            },
+            icon: Icon(
+              Icons.arrow_upward,
+              size: 16,
+            ),
+          )
         ],
       ),
     );
 
     return InkWell(
-      onTap: () {
-        if (detail.isPinned) {
-          _controller.columns.unpin(detail.columnKey);
+      onTap: () {},
+      onHover: (value) {
+        if (value) {
+          _controller.focuser.hoverOn(column: detail.columnKey);
         } else {
-          _controller.columns.pin(detail.columnKey);
+          _controller.focuser.hoverOff(column: detail.columnKey);
         }
       },
       child: Container(
-        color: detail.isPinned ? Colors.blue : Colors.yellow,
+        color: detail.isPinned
+            ? Colors.blue
+            : detail.hovering
+                ? Colors.yellow
+                : Colors.transparent,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -148,8 +203,18 @@ class _MyAppState extends State<MyApp> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Icon(
-              detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            IconButton(
+              onPressed: () {
+                if (detail.isPinned) {
+                  _controller.columns.unpin(detail.columnKey);
+                } else {
+                  _controller.columns.pin(detail.columnKey);
+                }
+              },
+              icon: Icon(
+                detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                size: 16,
+              ),
             ),
           ],
         ),
@@ -162,28 +227,49 @@ class _MyAppState extends State<MyApp> {
 
     final name = data != null ? data.toString() : "N/A";
 
+    return Container(
+      decoration: BoxDecoration(
+        color: detail.hovering ? Colors.grey : Colors.white,
+        border: detail.selected
+            ? Border.all(
+                color: Colors.green,
+                width: 2,
+              )
+            : null,
+      ),
+      child: Center(
+        child: Text(
+          "$name, ${detail.columnKey.id}",
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+
     return InkWell(
-      onTap: () {
-        if (!detail.selected) {
-          _controller.focuser.select(rows: [detail.rowKey]);
-        } else {
-          _controller.focuser.unselect(rows: [detail.rowKey]);
-        }
-      },
-      onLongPress: () {
-        if (detail.isPinned) {
-          _controller.rows.unpin(detail.rowKey);
-        } else {
-          _controller.rows.pin(detail.rowKey);
-        }
-      },
-      onHover: (value) {
-        if (value) {
-          _controller.focuser.hoverOn(row: detail.rowKey);
-        } else {
-          _controller.focuser.hoverOff(row: detail.rowKey);
-        }
-      },
+      // onTap: () {
+      //   if (!detail.selected) {
+      //     _controller.focuser.select(rows: [detail.rowKey]);
+      //   } else {
+      //     _controller.focuser.unselect(rows: [detail.rowKey]);
+      //   }
+      // },
+      // onLongPress: () {
+      //   if (detail.isPinned) {
+      //     _controller.rows.unpin(detail.rowKey);
+      //   } else {
+      //     _controller.rows.pin(detail.rowKey);
+      //   }
+      // },
+      // onHover: (value) {
+      //   if (value) {
+      //     _controller.focuser.hoverOn(row: detail.rowKey);
+      //   } else {
+      //     _controller.focuser.hoverOff(row: detail.rowKey);
+      //   }
+      // },
       child: Container(
         decoration: BoxDecoration(
           color: detail.hovering ? Colors.grey : Colors.white,

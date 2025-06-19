@@ -1,37 +1,86 @@
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/key_ordering.dart';
 
+typedef RowDataComparator = int Function(RowData a, RowData b);
+
 abstract base class TableRowController {
+  /// Add all rows.
+  /// Only new rows will be added, existing rows will be skipped
   void addAll(List<RowData> rows);
+
+  /// Add a single row.
+  /// If the row already exists, it will be skipped.
   void add(RowData row);
 
+  /// Remove all rows with the given keys.
+  /// If a row does not exist, it will be skipped.
   void removeAll(List<RowKey> rows);
+
+  /// Remove a single row with the given key.
   void remove(RowKey row);
 
+  /// Perform a sort on the rows by using the provided [compare] function.
+  ///
+  /// ALl pinned rows will be kept at the top of the list.
+  ///
+  /// Only non-pinned rows will be sorted.
+  ///
+  /// If [newRows] are provided, they will be added to the data source before sorting.
+  void performSort({
+    required RowDataComparator compare,
+    List<RowData>? newRows,
+  });
+
+  /// Pin a row with the given key.
   void pin(RowKey row);
+
+  /// Unpin a row with the given key.
   void unpin(RowKey row);
 
+  /// Reorder a row from one key to another.
+  ///
+  /// If the index of [from] is less than the index of [to], [from] will come after [to].
+  /// If the index of [from] is greater than the index of [to], [from] will come before [to].
+  /// If [from] and [to] are the same, nothing will happen.
   void reorder(RowKey from, RowKey to);
 
+  /// If always pinning the header row.
+  ///
+  /// if false and no other data rows are pinned, the header row will not be pinned.
+  ///
+  /// If there are pinned data rows, the header row will always be pinned.
   void setHeaderVisibility(bool alwaysShowHeader);
 
   bool get alwaysShowHeader;
 
-  int toCellRow(int row) {
-    return alwaysShowHeader ? row - 1 : row;
+  /// Convert a row index to a cell row index.
+  ///
+  /// [vicinityRow] is the index of the row in the table including the header row.
+  int toDataRow(int vicinityRow) {
+    return vicinityRow - 1;
   }
 
-  int toVicinityRow(int cellRow) {
-    return alwaysShowHeader ? cellRow + 1 : cellRow;
+  /// Convert a cell row index to a vicinity row index.
+  ///
+  /// [dataRow] is the index of the row in the table excluding the header row.
+  int toVicinityRow(int dataRow) {
+    return dataRow + 1;
   }
 
-  bool isColumnHeader(int vicinityRow) {
-    return alwaysShowHeader ? vicinityRow == 0 : false;
+  /// Check if the given [vicinityRow] is a column header.
+  /// If [alwaysShowHeader] is true, the header row is always at index 0.
+  /// If false, it will always return false as there is no header row.
+  bool isHeaderRow(int vicinityRow) {
+    return vicinityRow == 0;
   }
 
+  /// The count of rows including the header row
   int get count;
+
+  /// The count of pinned rows including the header row if [alwaysShowHeader] is true.
   int get pinnedCount;
 
+  /// The count of data rows excluding the header row.
   int get dataCount;
 }
 
@@ -69,7 +118,7 @@ final class TableDataController extends TableRowController
   int get dataCount => _rows.length;
 
   @override
-  int get count => dataCount + (_alwaysShowHeader ? 1 : 0);
+  int get count => dataCount + 1;
 
   bool _alwaysShowHeader;
 
@@ -91,30 +140,19 @@ final class TableDataController extends TableRowController
       _pinnedRowCount <= count,
       "Pinned rows $_pinnedRowCount must be less than or equal to row count $count",
     );
-    return alwaysShowHeader ? _pinnedRowCount + 1 : _pinnedRowCount;
+
+    if (_pinnedRowCount == 0) {
+      return alwaysShowHeader ? 1 : 0;
+    }
+
+    return _pinnedRowCount + 1;
   }
 
   @override
   void addAll(List<RowData> rows) {
     if (rows.isEmpty) return;
 
-    bool shouldNotify = false;
-
-    for (final row in rows) {
-      if (_rows.containsKey(row.key)) {
-        // If the row already exists, skip it
-        continue;
-      }
-
-      assert(
-          !_pinnedOrdering.contains(row.key) &&
-              !_nonPinnedOrdering.contains(row.key),
-          "Row key ${row.key} must not be in either ordering");
-
-      _rows[row.key] = row;
-      _nonPinnedOrdering.add(row.key);
-      shouldNotify = true;
-    }
+    final shouldNotify = _addAll(rows);
 
     if (shouldNotify) {
       notify();
@@ -130,15 +168,28 @@ final class TableDataController extends TableRowController
   void removeAll(List<RowKey> rows) {
     if (rows.isEmpty) return;
 
+    bool shouldNotify = false;
+
     for (final rowKey in rows) {
       if (_rows.containsKey(rowKey)) {
+        shouldNotify = true;
         _rows.remove(rowKey);
-        _nonPinnedOrdering.remove(rowKey);
-        _pinnedOrdering.remove(rowKey);
+
+        if (_pinnedOrdering.contains(rowKey)) {
+          _pinnedOrdering.remove(rowKey);
+        } else {
+          assert(
+            _nonPinnedOrdering.contains(rowKey),
+            "Row key $rowKey must be in the non-pinned ordering",
+          );
+          _nonPinnedOrdering.remove(rowKey);
+        }
       }
     }
 
-    notify();
+    if (shouldNotify) {
+      notify();
+    }
   }
 
   @override
@@ -206,6 +257,58 @@ final class TableDataController extends TableRowController
   }
 
   @override
+  void performSort({
+    required RowDataComparator compare,
+    List<RowData>? newRows,
+  }) {
+    if (newRows != null) {
+      _addAll(newRows);
+    }
+
+    final nonPinnedKeys = _nonPinnedOrdering.keys;
+
+    nonPinnedKeys.sort(
+      (a, b) {
+        final rowA = _rows[a]!;
+        final rowB = _rows[b]!;
+        return compare(rowA, rowB);
+      },
+    );
+
+    _nonPinnedOrdering.reset();
+
+    for (final key in nonPinnedKeys) {
+      _nonPinnedOrdering.add(key);
+    }
+
+    notify();
+  }
+
+  bool _addAll(List<RowData> rows) {
+    if (rows.isEmpty) return false;
+
+    bool shouldNotify = false;
+
+    for (final row in rows) {
+      if (_rows.containsKey(row.key)) {
+        // If the row already exists, skip it
+        continue;
+      }
+
+      assert(
+          !_pinnedOrdering.contains(row.key) &&
+              !_nonPinnedOrdering.contains(row.key),
+          "Row key ${row.key} must not be in either ordering");
+
+      _rows[row.key] = row;
+      _nonPinnedOrdering.add(row.key);
+      shouldNotify = true;
+    }
+
+    return shouldNotify;
+  }
+
+  @override
   void dispose() {
     super.dispose();
     _rows.clear();
@@ -266,8 +369,11 @@ final class TableDataController extends TableRowController
     return null; // Key not found in either ordering
   }
 
+  /// Get the row key at the given index in the data source.
+  ///
+  /// [index] is the index of the row in the table including the header row.
   RowKey getRowKey(int index) {
-    final dateIndex = toCellRow(index);
+    final dateIndex = toDataRow(index);
 
     assert(
       dateIndex >= 0 && dateIndex < dataCount,
@@ -286,9 +392,12 @@ final class TableDataController extends TableRowController
     return key!;
   }
 
-  int? getRowIndex(RowKey key) {
+  /// Get the index of the row in the table including the header row.
+  ///
+  /// if [key] is not in the data source, we will treat it as the header row and return 0.
+  int getRowIndex(RowKey key) {
     if (!_rows.containsKey(key)) {
-      return alwaysShowHeader ? 0 : null;
+      return 0;
     }
 
     int? index;
@@ -304,7 +413,7 @@ final class TableDataController extends TableRowController
       "Row key $key is not in the data source, cannot get index",
     );
 
-    return index != null ? toVicinityRow(index) : null;
+    return toVicinityRow(index!);
   }
 
   dynamic getCellData(RowKey rowKey, ColumnKey columnKey) {

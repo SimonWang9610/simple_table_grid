@@ -201,7 +201,7 @@ class QuickOrdering<T extends TableKey> extends KeyOrdering<T> {
         sorted.add(key);
       }
     }
-    return List.unmodifiable(sorted);
+    return sorted;
   }
 
   @override
@@ -298,23 +298,21 @@ class EfficientOrdering<T extends TableKey> extends KeyOrdering<T> {
       return; // No need to reorder if the keys are the same
     }
 
-    final removed = _keys.remove(from);
+    final fromIndex = _keys.indexOf(from);
+    final toIndex = _keys.indexOf(to);
 
-    if (removed) {
-      final toIndex = _keys.indexOf(to) + 1;
+    assert(
+      fromIndex != -1 && toIndex != -1,
+      "Both keys must be present in the ordering",
+    );
 
-      if (toIndex == 0) {
-        // If 'to' is not in the list, add 'from' at the end
-        _keys.add(from);
-      } else {
-        // Insert 'from' before 'to'
-        _keys.insert(toIndex, from);
-      }
-    }
+    _keys.removeAt(fromIndex);
+
+    _keys.insert(toIndex, from);
   }
 
   @override
-  List<T> get keys => List.unmodifiable(_keys);
+  List<T> get keys => List.of(_keys);
 
   @override
   T? get firstKey => _keys.isNotEmpty ? _keys.first : null;

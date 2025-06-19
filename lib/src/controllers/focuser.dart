@@ -3,23 +3,33 @@ import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/focus_controller.dart';
 
 abstract base class TableFocuser {
+  /// Updates the selection and hovering strategies.
+  ///
+  /// If no [selectionStrategies] are provided, it will disable selection.
+  /// If no [hoveringStrategies] are provided, it will disable hovering.
   void updateStrategies({
     List<FocusStrategy>? selectionStrategies,
     List<FocusStrategy>? hoveringStrategies,
   });
 
+  /// Selects the given rows, columns, or cells.
   void select({
     List<RowKey>? rows,
     List<ColumnKey>? columns,
     List<CellKey>? cells,
   });
+
+  /// Unselects the given rows, columns, or cells.
   void unselect({
     List<RowKey>? rows,
     List<ColumnKey>? columns,
     List<CellKey>? cells,
   });
 
+  /// Hovers over the given row or column.
   void hoverOn({RowKey? row, ColumnKey? column});
+
+  /// Stops hovering over the given row or column.
   void hoverOff({RowKey? row, ColumnKey? column});
 }
 
@@ -82,13 +92,8 @@ final class TableFocusController extends TableFocuser
     List<FocusStrategy>? selectionStrategies,
     List<FocusStrategy>? hoveringStrategies,
   }) {
-    if (selectionStrategies != null) {
-      updateSelectionStrategy(selectionStrategies);
-    }
-
-    if (hoveringStrategies != null) {
-      updateHoveringStrategy(hoveringStrategies);
-    }
+    updateSelectionStrategy(selectionStrategies ?? []);
+    updateHoveringStrategy(hoveringStrategies ?? []);
   }
 
   @override

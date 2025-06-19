@@ -1,5 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
+import 'package:simple_table_grid/src/controllers/column_controller.dart';
+import 'package:simple_table_grid/src/controllers/focuser.dart';
+import 'package:simple_table_grid/src/controllers/row_controller.dart';
+import 'package:simple_table_grid/src/controllers/sizer.dart';
 
 abstract base class TableController with ChangeNotifier {
   TableRowController get rows;
@@ -22,6 +26,27 @@ abstract base class TableController with ChangeNotifier {
 
   TableController._();
 
+  /// Creates a new [TableController] with the given parameters.
+  ///
+  /// [columns] is a list of [ColumnKey]s that define the columns of the table.
+  ///
+  /// [initialRows] is a list of [RowData] that defines the initial rows
+  ///
+  /// [alwaysShowHeader] determines whether the header should always be shown whens scrolling.
+  ///
+  /// [defaultRowExtent] and [defaultColumnExtent] define the default extents for rows and columns.
+  ///
+  ///
+  /// [rowExtents] and [columnExtents] are optional maps that define the extents for specific rows and columns.
+  /// if not provided or the key is not found, the default extent will be used.
+  ///
+  /// NOTE: if the extent of an index is not [Extent.range], resizing will not work for that index.
+  ///
+  /// [selectionStrategies] and [hoveringStrategies] define the strategies for selection and hovering.
+  /// By default, they are set to [FocusStrategy.row] for both selection and hovering.
+  ///
+  /// When building the cell widget, [CellDetail] would provide the hovering and selection state
+  /// for the cell.
   factory TableController({
     required List<ColumnKey> columns,
     List<RowData> initialRows = const [],
@@ -70,7 +95,7 @@ abstract mixin class TableControllerCoordinator {
 }
 
 abstract interface class TableIndexFinder {
-  int? getRowIndex(RowKey key);
+  int getRowIndex(RowKey key);
   RowKey? getRowKey(int index);
   RowKey? previousRow(RowKey key);
   RowKey? nextRow(RowKey key);
@@ -149,7 +174,7 @@ final class _ControllerImpl extends TableController
 
   @override
   Listenable? getCellFocusNotifier(ChildVicinity vicinity) {
-    if (data.isColumnHeader(vicinity.row)) {
+    if (data.isHeaderRow(vicinity.row)) {
       return focus.columnFocusNotifier;
     } else {
       return focus.cellFocusNotifier;
@@ -160,8 +185,8 @@ final class _ControllerImpl extends TableController
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity) {
     final columnKey = getColumnKey(vicinity.column);
 
-    if (data.isColumnHeader(vicinity.row)) {
-      return ColumnHeaderDetail(
+    if (data.isHeaderRow(vicinity.row)) {
+      return TableHeaderDetail(
         columnKey: columnKey,
         isPinned: isColumnPinned(vicinity.column),
         selected: focus.isColumnSelected(columnKey),
@@ -191,7 +216,7 @@ final class _ControllerImpl extends TableController
   }
 
   @override
-  int? getRowIndex(RowKey key) {
+  int getRowIndex(RowKey key) {
     return data.getRowIndex(key);
   }
 
