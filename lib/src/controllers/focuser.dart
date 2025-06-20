@@ -35,12 +35,12 @@ abstract base class TableFocuser {
 
 final class TableFocusController extends TableFocuser
     with TableControllerCoordinator {
-  final _selectedRows = LineFocusController<RowKey>();
-  final _selectedColumns = LineFocusController<ColumnKey>();
-  final _selectedCells = CellFocusController();
+  final _selectedRows = KeyFocuser<RowKey>();
+  final _selectedColumns = KeyFocuser<ColumnKey>();
+  final _selectedCells = KeyFocuser<CellKey>();
 
-  final _hoveringRows = LineFocusController<RowKey>();
-  final _hoveringColumns = LineFocusController<ColumnKey>();
+  final _hoveringRows = KeyFocuser<RowKey>();
+  final _hoveringColumns = KeyFocuser<ColumnKey>();
 
   final Set<FocusStrategy> _selectionStrategies = {};
   final Set<FocusStrategy> _hoveringStrategies = {};

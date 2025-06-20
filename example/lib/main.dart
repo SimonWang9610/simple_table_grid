@@ -37,8 +37,11 @@ class _MyAppState extends State<MyApp> {
     defaultColumnExtent: Extent.range(pixels: 100, min: 60),
   );
 
+  final _keyword = TextEditingController();
+
   @override
   void dispose() {
+    _keyword.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -59,37 +62,43 @@ class _MyAppState extends State<MyApp> {
         ),
         child: Padding(
           padding: const EdgeInsets.all(8.0),
-          child: TableGrid(
-            controller: _controller,
-            reorderRow: true,
-            resizeRow: true,
-            border: TableGridBorder(
-              vertical: BorderSide(
-                color: Colors.red,
-                width: 0.5,
+          child: Column(
+            spacing: 8,
+            children: [
+              TextField(
+                controller: _keyword,
+                decoration: InputDecoration(
+                    labelText: "Search",
+                    border: OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        _keyword.clear();
+                        _search("");
+                      },
+                      icon: Icon(Icons.close),
+                    )),
+                onSubmitted: _search,
               ),
-              horizontal: BorderSide(
-                color: Colors.black,
-                width: 0.5,
-              ),
-            ),
-            builder: _buildCell,
-            headerBuilder: _buildColumn,
-            // border: TableGridBorder(
-            //     // vertical: BorderSide(
-            //     //   color: Colors.red,
-            //     //   width: 2,
-            //     // ),
-            //     // horizontal: BorderSide(
-            //     //   color: Colors.black,
-            //     //   width: 2,
-            //     // ),
-            //     ),
-            // loadingBuilder: (ctx) {
-            //   return CircularProgressIndicator(
-            //     color: Colors.red,
-            //   );
-            // },
+              Expanded(
+                child: TableGrid(
+                  controller: _controller,
+                  reorderRow: true,
+                  resizeRow: true,
+                  border: TableGridBorder(
+                    vertical: BorderSide(
+                      color: Colors.red,
+                      width: 0.5,
+                    ),
+                    horizontal: BorderSide(
+                      color: Colors.black,
+                      width: 0.5,
+                    ),
+                  ),
+                  builder: _buildCell,
+                  headerBuilder: _buildColumn,
+                ),
+              )
+            ],
           ),
         ),
       ),
@@ -227,49 +236,49 @@ class _MyAppState extends State<MyApp> {
 
     final name = data != null ? data.toString() : "N/A";
 
-    return Container(
-      decoration: BoxDecoration(
-        color: detail.hovering ? Colors.grey : Colors.white,
-        border: detail.selected
-            ? Border.all(
-                color: Colors.green,
-                width: 2,
-              )
-            : null,
-      ),
-      child: Center(
-        child: Text(
-          "$name, ${detail.columnKey.id}",
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
+    // return Container(
+    //   decoration: BoxDecoration(
+    //     color: detail.hovering ? Colors.grey : Colors.white,
+    //     border: detail.selected
+    //         ? Border.all(
+    //             color: Colors.green,
+    //             width: 2,
+    //           )
+    //         : null,
+    //   ),
+    //   child: Center(
+    //     child: Text(
+    //       "$name, ${detail.columnKey.id}",
+    //       style: const TextStyle(
+    //         fontSize: 16,
+    //         fontWeight: FontWeight.bold,
+    //       ),
+    //     ),
+    //   ),
+    // );
 
     return InkWell(
-      // onTap: () {
-      //   if (!detail.selected) {
-      //     _controller.focuser.select(rows: [detail.rowKey]);
-      //   } else {
-      //     _controller.focuser.unselect(rows: [detail.rowKey]);
-      //   }
-      // },
-      // onLongPress: () {
-      //   if (detail.isPinned) {
-      //     _controller.rows.unpin(detail.rowKey);
-      //   } else {
-      //     _controller.rows.pin(detail.rowKey);
-      //   }
-      // },
-      // onHover: (value) {
-      //   if (value) {
-      //     _controller.focuser.hoverOn(row: detail.rowKey);
-      //   } else {
-      //     _controller.focuser.hoverOff(row: detail.rowKey);
-      //   }
-      // },
+      onTap: () {
+        if (!detail.selected) {
+          _controller.focuser.select(rows: [detail.rowKey]);
+        } else {
+          _controller.focuser.unselect(rows: [detail.rowKey]);
+        }
+      },
+      onLongPress: () {
+        if (detail.isPinned) {
+          _controller.rows.unpin(detail.rowKey);
+        } else {
+          _controller.rows.pin(detail.rowKey);
+        }
+      },
+      onHover: (value) {
+        if (value) {
+          _controller.focuser.hoverOn(row: detail.rowKey);
+        } else {
+          _controller.focuser.hoverOff(row: detail.rowKey);
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           color: detail.hovering ? Colors.grey : Colors.white,
@@ -300,7 +309,7 @@ class _MyAppState extends State<MyApp> {
       count,
       (index) => RowData(
         RowKey(UniqueKey()),
-        {
+        data: {
           for (final column in columns)
             column: 'Row ${_controller.rows.dataCount + index}',
         },
@@ -330,5 +339,17 @@ class _MyAppState extends State<MyApp> {
       print("Removing column: $columnKey");
       _controller.columns.remove(columnKey);
     }
+  }
+
+  void _search(String keyword) {
+    _controller.rows.performSearch(
+      keyword: keyword,
+      matcher: (keyword, data) {
+        return data.data.values.any(
+          (value) =>
+              value.toString().toLowerCase().contains(keyword.toLowerCase()),
+        );
+      },
+    );
   }
 }

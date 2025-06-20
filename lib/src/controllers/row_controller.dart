@@ -1,5 +1,5 @@
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/controllers/search_controller.dart';
+import 'package:simple_table_grid/src/components/search_bucket.dart';
 
 typedef RowDataComparator = int Function(RowData a, RowData b);
 
@@ -35,6 +35,8 @@ abstract base class TableRowController {
     required String keyword,
     required RowDataMatcher matcher,
   });
+
+  void undoSearch();
 
   /// Pin a row with the given key.
   void pin(RowKey row);
@@ -97,7 +99,7 @@ final class TableDataController extends TableRowController
   }) : _alwaysShowHeader = alwaysShowHeader {
     for (final row in rows) {
       _rows[row.key] = row;
-      _snapshots.add(row);
+      _searcher.add(row);
     }
   }
 
@@ -105,19 +107,19 @@ final class TableDataController extends TableRowController
   // final _pinnedOrdering = KeyOrdering.efficient(<RowKey>[]);
   // final _nonPinnedOrdering = KeyOrdering.quick(<RowKey>[]);
 
-  late final _snapshots = DataSearchSnapshots(this);
+  late final _searcher = DataSearchBucket(this);
 
   @override
   Map<RowKey, RowData> get rows => _rows;
 
   List<RowData> get orderedRows {
-    final ordered = _snapshots.current.ordered;
+    final ordered = _searcher.current.ordered;
 
     return ordered.map((key) => _rows[key]!).toList();
   }
 
   @override
-  int get dataCount => _snapshots.dataCount;
+  int get dataCount => _searcher.dataCount;
 
   @override
   int get count => dataCount + 1;
@@ -134,7 +136,7 @@ final class TableDataController extends TableRowController
     notify();
   }
 
-  int get _pinnedRowCount => _snapshots.pinnedCount;
+  int get _pinnedRowCount => _searcher.pinnedCount;
 
   @override
   int get pinnedCount {
@@ -176,7 +178,7 @@ final class TableDataController extends TableRowController
       if (_rows.containsKey(rowKey)) {
         shouldNotify = true;
         _rows.remove(rowKey);
-        _snapshots.remove(rowKey);
+        _searcher.remove(rowKey);
       }
     }
 
@@ -193,7 +195,7 @@ final class TableDataController extends TableRowController
   @override
   void pin(RowKey row) {
     if (!_rows.containsKey(row)) return;
-    _snapshots.current.pin(row);
+    _searcher.current.pin(row);
     notify();
   }
 
@@ -201,7 +203,7 @@ final class TableDataController extends TableRowController
   void unpin(RowKey row) {
     if (!_rows.containsKey(row)) return;
 
-    _snapshots.current.unpin(row);
+    _searcher.current.unpin(row);
     notify();
   }
 
@@ -216,7 +218,7 @@ final class TableDataController extends TableRowController
       "To key $to is not in the data source",
     );
 
-    _snapshots.current.reorder(from, to);
+    _searcher.current.reorder(from, to);
 
     notify();
   }
@@ -230,7 +232,7 @@ final class TableDataController extends TableRowController
       _addAll(newRows);
     }
 
-    _snapshots.performSort(compare: compare);
+    _searcher.performSort(compare: compare);
 
     notify();
   }
@@ -247,7 +249,7 @@ final class TableDataController extends TableRowController
       }
 
       _rows[row.key] = row;
-      _snapshots.add(row);
+      _searcher.add(row);
       shouldNotify = true;
     }
 
@@ -259,7 +261,7 @@ final class TableDataController extends TableRowController
     required String keyword,
     required RowDataMatcher matcher,
   }) {
-    final shouldNotify = _snapshots.search(
+    final shouldNotify = _searcher.perform(
       keyword,
       matcher: matcher,
     );
@@ -270,10 +272,19 @@ final class TableDataController extends TableRowController
   }
 
   @override
+  void undoSearch() {
+    final shouldNotify = _searcher.undo();
+
+    if (shouldNotify) {
+      notify();
+    }
+  }
+
+  @override
   void dispose() {
     super.dispose();
     _rows.clear();
-    _snapshots.dispose();
+    _searcher.clear();
   }
 
   RowKey? previous(RowKey key) {
@@ -282,7 +293,7 @@ final class TableDataController extends TableRowController
       "Row key $key is not in the data source",
     );
 
-    return _snapshots.current.previous(key);
+    return _searcher.current.previous(key);
   }
 
   RowKey? next(RowKey key) {
@@ -291,7 +302,7 @@ final class TableDataController extends TableRowController
       "Row key $key is not in the data source",
     );
 
-    return _snapshots.current.next(key);
+    return _searcher.current.next(key);
   }
 
   /// Get the row key at the given index in the data source.
@@ -300,7 +311,7 @@ final class TableDataController extends TableRowController
   RowKey getRowKey(int index) {
     final dateIndex = toDataRow(index);
 
-    return _snapshots.current.getRowKey(dateIndex);
+    return _searcher.current.getRowKey(dateIndex);
   }
 
   /// Get the index of the row in the table including the header row.
@@ -311,7 +322,7 @@ final class TableDataController extends TableRowController
       return 0;
     }
 
-    final index = _snapshots.current.getRowIndex(key);
+    final index = _searcher.current.getRowIndex(key);
 
     assert(
       index != null,
