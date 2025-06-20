@@ -1,5 +1,5 @@
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/components/key_ordering.dart';
+import 'package:simple_table_grid/src/controllers/search_controller.dart';
 
 typedef RowDataComparator = int Function(RowData a, RowData b);
 
@@ -29,6 +29,11 @@ abstract base class TableRowController {
   void performSort({
     required RowDataComparator compare,
     List<RowData>? newRows,
+  });
+
+  void performSearch({
+    required String keyword,
+    required RowDataMatcher matcher,
   });
 
   /// Pin a row with the given key.
@@ -85,37 +90,34 @@ abstract base class TableRowController {
 }
 
 final class TableDataController extends TableRowController
-    with TableControllerCoordinator {
+    with TableControllerCoordinator, RowDataSource {
   TableDataController({
     List<RowData> rows = const [],
     bool alwaysShowHeader = true,
   }) : _alwaysShowHeader = alwaysShowHeader {
     for (final row in rows) {
       _rows[row.key] = row;
-      _nonPinnedOrdering.add(row.key);
+      _snapshots.add(row);
     }
   }
 
   final _rows = <RowKey, RowData>{};
-  final _pinnedOrdering = KeyOrdering.efficient(<RowKey>[]);
-  final _nonPinnedOrdering = KeyOrdering.quick(<RowKey>[]);
+  // final _pinnedOrdering = KeyOrdering.efficient(<RowKey>[]);
+  // final _nonPinnedOrdering = KeyOrdering.quick(<RowKey>[]);
+
+  late final _snapshots = DataSearchSnapshots(this);
+
+  @override
+  Map<RowKey, RowData> get rows => _rows;
 
   List<RowData> get orderedRows {
-    final ordered = <RowData>[];
+    final ordered = _snapshots.current.ordered;
 
-    for (final key in _pinnedOrdering.keys) {
-      ordered.add(_rows[key]!);
-    }
-
-    for (final key in _nonPinnedOrdering.keys) {
-      ordered.add(_rows[key]!);
-    }
-
-    return ordered;
+    return ordered.map((key) => _rows[key]!).toList();
   }
 
   @override
-  int get dataCount => _rows.length;
+  int get dataCount => _snapshots.dataCount;
 
   @override
   int get count => dataCount + 1;
@@ -132,7 +134,7 @@ final class TableDataController extends TableRowController
     notify();
   }
 
-  int get _pinnedRowCount => _pinnedOrdering.length;
+  int get _pinnedRowCount => _snapshots.pinnedCount;
 
   @override
   int get pinnedCount {
@@ -174,16 +176,7 @@ final class TableDataController extends TableRowController
       if (_rows.containsKey(rowKey)) {
         shouldNotify = true;
         _rows.remove(rowKey);
-
-        if (_pinnedOrdering.contains(rowKey)) {
-          _pinnedOrdering.remove(rowKey);
-        } else {
-          assert(
-            _nonPinnedOrdering.contains(rowKey),
-            "Row key $rowKey must be in the non-pinned ordering",
-          );
-          _nonPinnedOrdering.remove(rowKey);
-        }
+        _snapshots.remove(rowKey);
       }
     }
 
@@ -199,19 +192,16 @@ final class TableDataController extends TableRowController
 
   @override
   void pin(RowKey row) {
-    if (!_rows.containsKey(row) || _pinnedOrdering.contains(row)) return;
-
-    _pinnedOrdering.add(row);
-    _nonPinnedOrdering.remove(row);
+    if (!_rows.containsKey(row)) return;
+    _snapshots.current.pin(row);
     notify();
   }
 
   @override
   void unpin(RowKey row) {
-    if (!_rows.containsKey(row) || !_pinnedOrdering.contains(row)) return;
+    if (!_rows.containsKey(row)) return;
 
-    _pinnedOrdering.remove(row);
-    _nonPinnedOrdering.insert(0, row);
+    _snapshots.current.unpin(row);
     notify();
   }
 
@@ -226,33 +216,8 @@ final class TableDataController extends TableRowController
       "To key $to is not in the data source",
     );
 
-    final fromPinned = _pinnedOrdering.contains(from);
+    _snapshots.current.reorder(from, to);
 
-    assert(
-      fromPinned || _nonPinnedOrdering.contains(from),
-      "From key $from is not in the pinned or non-pinned ordering",
-    );
-
-    final toPinned = _pinnedOrdering.contains(to);
-
-    assert(
-      toPinned || _nonPinnedOrdering.contains(to),
-      "To key $to is not in the pinned or non-pinned ordering",
-    );
-
-    if (fromPinned && toPinned) {
-      _pinnedOrdering.reorder(from, to);
-    } else if (!fromPinned && !toPinned) {
-      _nonPinnedOrdering.reorder(from, to);
-    } else if (fromPinned && !toPinned) {
-      _pinnedOrdering.remove(from);
-      _nonPinnedOrdering.add(from);
-      _nonPinnedOrdering.reorder(from, to);
-    } else if (!fromPinned && toPinned) {
-      _nonPinnedOrdering.remove(from);
-      _pinnedOrdering.add(from);
-      _pinnedOrdering.reorder(from, to);
-    }
     notify();
   }
 
@@ -265,21 +230,7 @@ final class TableDataController extends TableRowController
       _addAll(newRows);
     }
 
-    final nonPinnedKeys = _nonPinnedOrdering.keys;
-
-    nonPinnedKeys.sort(
-      (a, b) {
-        final rowA = _rows[a]!;
-        final rowB = _rows[b]!;
-        return compare(rowA, rowB);
-      },
-    );
-
-    _nonPinnedOrdering.reset();
-
-    for (final key in nonPinnedKeys) {
-      _nonPinnedOrdering.add(key);
-    }
+    _snapshots.performSort(compare: compare);
 
     notify();
   }
@@ -295,13 +246,8 @@ final class TableDataController extends TableRowController
         continue;
       }
 
-      assert(
-          !_pinnedOrdering.contains(row.key) &&
-              !_nonPinnedOrdering.contains(row.key),
-          "Row key ${row.key} must not be in either ordering");
-
       _rows[row.key] = row;
-      _nonPinnedOrdering.add(row.key);
+      _snapshots.add(row);
       shouldNotify = true;
     }
 
@@ -309,11 +255,25 @@ final class TableDataController extends TableRowController
   }
 
   @override
+  void performSearch({
+    required String keyword,
+    required RowDataMatcher matcher,
+  }) {
+    final shouldNotify = _snapshots.search(
+      keyword,
+      matcher: matcher,
+    );
+
+    if (shouldNotify) {
+      notify();
+    }
+  }
+
+  @override
   void dispose() {
     super.dispose();
     _rows.clear();
-    _pinnedOrdering.reset();
-    _nonPinnedOrdering.reset();
+    _snapshots.dispose();
   }
 
   RowKey? previous(RowKey key) {
@@ -322,24 +282,7 @@ final class TableDataController extends TableRowController
       "Row key $key is not in the data source",
     );
 
-    final pinnedIndex = _pinnedOrdering.indexOf(key);
-
-    if (pinnedIndex != null) {
-      return _pinnedOrdering.firstKey != key
-          ? _pinnedOrdering[pinnedIndex - 1]
-          : null;
-    }
-
-    final nonPinnedIndex = _nonPinnedOrdering.indexOf(key);
-    if (nonPinnedIndex != null) {
-      if (_nonPinnedOrdering.firstKey == key) {
-        return _pinnedOrdering.lastKey;
-      } else {
-        return _nonPinnedOrdering[nonPinnedIndex - 1];
-      }
-    }
-
-    return null; // Key not found in either ordering
+    return _snapshots.current.previous(key);
   }
 
   RowKey? next(RowKey key) {
@@ -348,25 +291,7 @@ final class TableDataController extends TableRowController
       "Row key $key is not in the data source",
     );
 
-    final pinnedIndex = _pinnedOrdering.indexOf(key);
-
-    if (pinnedIndex != null) {
-      return _pinnedOrdering.lastKey != key
-          ? _pinnedOrdering[pinnedIndex + 1]
-          : _nonPinnedOrdering.firstKey;
-    }
-
-    final nonPinnedIndex = _nonPinnedOrdering.indexOf(key);
-
-    if (nonPinnedIndex != null) {
-      if (_nonPinnedOrdering.lastKey != key) {
-        return _nonPinnedOrdering[nonPinnedIndex + 1];
-      } else {
-        return null;
-      }
-    }
-
-    return null; // Key not found in either ordering
+    return _snapshots.current.next(key);
   }
 
   /// Get the row key at the given index in the data source.
@@ -375,21 +300,7 @@ final class TableDataController extends TableRowController
   RowKey getRowKey(int index) {
     final dateIndex = toDataRow(index);
 
-    assert(
-      dateIndex >= 0 && dateIndex < dataCount,
-      "Data index $dateIndex is out of bounds for rows of length $dataCount",
-    );
-
-    final key = dateIndex >= _pinnedRowCount
-        ? _nonPinnedOrdering[dateIndex - _pinnedRowCount]
-        : _pinnedOrdering[dateIndex];
-
-    assert(
-      key != null && _rows.containsKey(key),
-      "Row key at index $index is null, which should not happen",
-    );
-
-    return key!;
+    return _snapshots.current.getRowKey(dateIndex);
   }
 
   /// Get the index of the row in the table including the header row.
@@ -400,17 +311,11 @@ final class TableDataController extends TableRowController
       return 0;
     }
 
-    int? index;
-
-    if (_pinnedOrdering.contains(key)) {
-      index = _pinnedOrdering.indexOf(key);
-    } else if (_nonPinnedOrdering.contains(key)) {
-      index = (_nonPinnedOrdering.indexOf(key) ?? 0) + _pinnedRowCount;
-    }
+    final index = _snapshots.current.getRowIndex(key);
 
     assert(
       index != null,
-      "Row key $key is not in the data source, cannot get index",
+      "Row key $key is not in the data source",
     );
 
     return toVicinityRow(index!);
