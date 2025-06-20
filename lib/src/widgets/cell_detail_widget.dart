@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 import 'package:simple_table_grid/src/widgets/auto_cursor_region.dart';
-import 'package:simple_table_grid/src/widgets/theme_data.dart';
 
 typedef DragCellCallback<T extends CellDetail> = void Function(
   T from,
