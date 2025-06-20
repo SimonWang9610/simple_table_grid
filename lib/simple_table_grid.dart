@@ -6,6 +6,7 @@ export 'src/models/key.dart';
 export 'src/models/table_grid_border.dart';
 
 export "src/widgets/widget.dart";
+export 'src/widgets/theme_data.dart';
 
 export "custom_render/delegate.dart";
 export "custom_render/viewport.dart";

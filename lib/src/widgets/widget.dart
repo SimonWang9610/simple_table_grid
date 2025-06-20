@@ -12,7 +12,7 @@ class TableGrid extends StatefulWidget {
   final ScrollPhysics? verticalScrollPhysics;
   final TableCellDetailBuilder<TableCellDetail> builder;
   final TableCellDetailBuilder<TableHeaderDetail> headerBuilder;
-  final TableGridBorder border;
+  final TableGridThemeData theme;
 
   /// Whether to allow resizing of columns.
   ///
@@ -41,7 +41,7 @@ class TableGrid extends StatefulWidget {
     required this.controller,
     required this.builder,
     required this.headerBuilder,
-    required this.border,
+    this.theme = const TableGridThemeData(),
     this.horizontalScrollController,
     this.horizontalScrollPhysics,
     this.verticalScrollController,
@@ -118,7 +118,10 @@ class _TableGridState extends State<TableGrid> {
 
     final bar = Scrollbar(
       controller: _effectiveVerticalScrollController,
-      child: grid,
+      child: TableGridTheme(
+        data: widget.theme,
+        child: grid,
+      ),
     );
 
     return Scrollbar(
@@ -134,15 +137,12 @@ class _TableGridState extends State<TableGrid> {
     final rightEdge = _isRightEdge(vicinity.column);
     final bottomEdge = _isBottomEdge(vicinity.row);
 
-    final cellBorder = widget.border.calculateBorder(rightEdge, bottomEdge);
-    final padding = widget.border.calculatePadding(rightEdge, bottomEdge);
-
     final detail = widget.controller.internal.getCellDetail(vicinity);
 
     return switch (detail) {
       TableHeaderDetail() => CellDetailWidget(
-          border: cellBorder,
-          padding: padding,
+          isRightEdge: rightEdge,
+          isBottomEdge: bottomEdge,
           detail: detail,
           builder: widget.headerBuilder,
           dragEnabled: widget.reorderColumn,
@@ -153,9 +153,9 @@ class _TableGridState extends State<TableGrid> {
           },
         ),
       TableCellDetail() => CellDetailWidget(
-          border: cellBorder,
-          padding: padding,
           detail: detail,
+          isRightEdge: rightEdge,
+          isBottomEdge: bottomEdge,
           dragEnabled: widget.reorderRow,
           resizeEnabled: widget.resizeRow,
           cursorDelegate: widget.controller.sizer as TableCursorDelegate,

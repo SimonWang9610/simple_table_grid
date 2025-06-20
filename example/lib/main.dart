@@ -82,16 +82,28 @@ class _MyAppState extends State<MyApp> {
               Expanded(
                 child: TableGrid(
                   controller: _controller,
-                  reorderRow: true,
-                  resizeRow: true,
-                  border: TableGridBorder(
-                    vertical: BorderSide(
-                      color: Colors.red,
-                      width: 0.5,
+                  // reorderRow: true,
+                  // resizeRow: true,
+                  theme: TableGridThemeData(
+                    cellTheme: CellTheme(
+                      hoveringColor: Colors.grey.shade200,
+                      selectedColor: Colors.green.shade100,
+                      unselectedColor: Colors.white,
                     ),
-                    horizontal: BorderSide(
-                      color: Colors.black,
-                      width: 0.5,
+                    headerTheme: CellTheme(
+                      hoveringColor: Colors.blue.shade100,
+                      selectedColor: Colors.blue.shade200,
+                      unselectedColor: Colors.yellow.shade100,
+                    ),
+                    border: TableGridBorder(
+                      vertical: BorderSide(
+                        color: Colors.red,
+                        width: 0.5,
+                      ),
+                      horizontal: BorderSide(
+                        color: Colors.black,
+                        width: 0.5,
+                      ),
                     ),
                   ),
                   builder: _buildCell,
@@ -130,12 +142,13 @@ class _MyAppState extends State<MyApp> {
   bool _ascending = true;
 
   Widget _buildColumn(BuildContext ctx, TableHeaderDetail detail) {
-    return Container(
-      color: detail.isPinned ? Colors.blue : Colors.yellow,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Expanded(
+    print(
+        "Building column: ${detail.columnKey.id}, hovering: ${detail.hovering}");
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Expanded(
+          child: Center(
             child: Text(
               detail.columnKey.id,
               style: const TextStyle(
@@ -144,47 +157,47 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
           ),
-          IconButton(
-            onPressed: () {
-              if (detail.isPinned) {
-                _controller.columns.unpin(detail.columnKey);
-              } else {
-                _controller.columns.pin(detail.columnKey);
-              }
-            },
-            icon: Icon(
-              detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-              size: 16,
-            ),
+        ),
+        IconButton(
+          onPressed: () {
+            if (detail.isPinned) {
+              _controller.columns.unpin(detail.columnKey);
+            } else {
+              _controller.columns.pin(detail.columnKey);
+            }
+          },
+          icon: Icon(
+            detail.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            size: 16,
           ),
-          IconButton(
-            onPressed: () {
-              _ascending = !_ascending;
+        ),
+        IconButton(
+          onPressed: () {
+            _ascending = !_ascending;
 
-              _controller.rows.performSort(
-                compare: (a, b) {
-                  final aCell = a[detail.columnKey];
-                  final bCell = b[detail.columnKey];
+            _controller.rows.performSort(
+              compare: (a, b) {
+                final aCell = a[detail.columnKey];
+                final bCell = b[detail.columnKey];
 
-                  if (aCell == null || bCell == null) {
-                    return -1; // Handle null values gracefully
-                  }
+                if (aCell == null || bCell == null) {
+                  return -1; // Handle null values gracefully
+                }
 
-                  if (_ascending) {
-                    return aCell.toString().compareTo(bCell.toString());
-                  } else {
-                    return bCell.toString().compareTo(aCell.toString());
-                  }
-                },
-              );
-            },
-            icon: Icon(
-              Icons.arrow_upward,
-              size: 16,
-            ),
-          )
-        ],
-      ),
+                if (_ascending) {
+                  return aCell.toString().compareTo(bCell.toString());
+                } else {
+                  return bCell.toString().compareTo(aCell.toString());
+                }
+              },
+            );
+          },
+          icon: Icon(
+            Icons.arrow_upward,
+            size: 16,
+          ),
+        )
+      ],
     );
 
     return InkWell(
@@ -236,27 +249,6 @@ class _MyAppState extends State<MyApp> {
 
     final name = data != null ? data.toString() : "N/A";
 
-    // return Container(
-    //   decoration: BoxDecoration(
-    //     color: detail.hovering ? Colors.grey : Colors.white,
-    //     border: detail.selected
-    //         ? Border.all(
-    //             color: Colors.green,
-    //             width: 2,
-    //           )
-    //         : null,
-    //   ),
-    //   child: Center(
-    //     child: Text(
-    //       "$name, ${detail.columnKey.id}",
-    //       style: const TextStyle(
-    //         fontSize: 16,
-    //         fontWeight: FontWeight.bold,
-    //       ),
-    //     ),
-    //   ),
-    // );
-
     return InkWell(
       onTap: () {
         if (!detail.selected) {
@@ -279,23 +271,12 @@ class _MyAppState extends State<MyApp> {
           _controller.focuser.hoverOff(row: detail.rowKey);
         }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: detail.hovering ? Colors.grey : Colors.white,
-          border: detail.selected
-              ? Border.all(
-                  color: Colors.green,
-                  width: 2,
-                )
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            "$name, ${detail.columnKey.id}",
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+      child: Center(
+        child: Text(
+          "$name, ${detail.columnKey.id}",
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),

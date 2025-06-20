@@ -195,7 +195,7 @@ final class TableDataController extends TableRowController
   @override
   void pin(RowKey row) {
     if (!_rows.containsKey(row)) return;
-    _searcher.current.pin(row);
+    _searcher.pin(row);
     notify();
   }
 
@@ -203,7 +203,7 @@ final class TableDataController extends TableRowController
   void unpin(RowKey row) {
     if (!_rows.containsKey(row)) return;
 
-    _searcher.current.unpin(row);
+    _searcher.unpin(row);
     notify();
   }
 
