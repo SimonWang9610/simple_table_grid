@@ -30,6 +30,8 @@ abstract base class TableController with ChangeNotifier {
   ///
   /// [columns] is a list of [ColumnKey]s that define the columns of the table.
   ///
+  /// [pinnedColumns] is a list of [ColumnKey]s that define the pinned columns of the table.
+  ///
   /// [initialRows] is a list of [RowData] that defines the initial rows
   ///
   /// [alwaysShowHeader] determines whether the header should always be shown whens scrolling.
@@ -49,6 +51,7 @@ abstract base class TableController with ChangeNotifier {
   /// for the cell.
   factory TableController({
     required List<ColumnKey> columns,
+    List<ColumnKey> pinnedColumns = const [],
     List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
     required Extent defaultRowExtent,
@@ -115,6 +118,7 @@ final class _ControllerImpl extends TableController
 
   _ControllerImpl({
     required List<ColumnKey> columns,
+    List<ColumnKey> pinnedColumns = const [],
     List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
     required Extent defaultRowExtent,
@@ -137,7 +141,7 @@ final class _ControllerImpl extends TableController
       rows: initialRows,
     )..bind(this);
 
-    header = TableHeaderController(columns)..bind(this);
+    header = TableHeaderController(columns, pinnedColumns)..bind(this);
 
     focus = TableFocusController(
       selectionStrategies: selectionStrategies,

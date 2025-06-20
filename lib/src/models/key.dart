@@ -1,3 +1,6 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:flutter/foundation.dart';
+
 sealed class TableKey {
   const TableKey();
 }
@@ -82,4 +85,14 @@ class RowData {
   }
 
   Set<ColumnKey> get columns => data.keys.toSet();
+
+  @override
+  bool operator ==(covariant RowData other) {
+    if (identical(this, other)) return true;
+
+    return other.key == key && mapEquals(other.data, data);
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ data.hashCode;
 }
