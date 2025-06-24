@@ -1,18 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:flutter/widgets.dart';
-
-// todo: child builder logic
-mixin CellLayoutExtentDelegate on TwoDimensionalChildDelegate {
-  int get rowCount;
-  int get columnCount;
-  int get pinnedRowCount;
-  int get pinnedColumnCount;
-
-  Extent getColumnExtent(int index);
-  Extent getRowExtent(int index);
-}
-
+/// A class representing the extent of a row or column in a table grid.
+/// Only [Extent.range] supports resizing.
+/// Other extents are fixed and do not change during resizing.
 sealed class Extent {
   const Extent();
 

@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/custom_render/delegate.dart';
 import 'package:simple_table_grid/custom_render/render.dart';
-
-import 'layout_extent_delegate.dart';
 
 class TableGridViewport extends TwoDimensionalViewport {
   const TableGridViewport({

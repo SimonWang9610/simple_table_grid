@@ -201,6 +201,60 @@ void main() {
       expect(controller.orderedRows, orderedEquals(rows));
     });
   });
+
+  group("paginated controller", () {
+    test("initial", () {
+      final controller = PaginatedTableDataController(pageSize: 2, rows: rows);
+
+      expect(controller.dataCount, equals(5));
+      expect(controller.currentPage, equals(1));
+      expect(controller.pages, equals(3));
+      expect(controller.count, equals(3));
+    });
+
+    test("next page", () {
+      final controller = PaginatedTableDataController(pageSize: 2, rows: rows);
+
+      expect(controller.dataCount, equals(5));
+      expect(controller.currentPage, equals(1));
+      expect(controller.pages, equals(3));
+
+      controller.nextPage();
+
+      expect(controller.currentPage, equals(2));
+      expect(controller.count, equals(3));
+    });
+
+    test("set page size", () {
+      final controller = PaginatedTableDataController(pageSize: 2, rows: rows);
+
+      expect(controller.dataCount, equals(5));
+      expect(controller.currentPage, equals(1));
+      expect(controller.pages, equals(3));
+
+      controller.pageSize = 3;
+
+      expect(controller.dataCount, equals(5));
+      expect(controller.currentPage, equals(1));
+      expect(controller.pages, equals(2));
+      expect(controller.count, equals(4));
+    });
+
+    test("perform search", () {
+      final controller = PaginatedTableDataController(pageSize: 2, rows: rows);
+
+      controller.performSearch(
+        keyword: 'C11',
+        matcher: _match,
+      );
+
+      expect(controller.dataCount, equals(1));
+      expect(controller.currentPage, equals(1));
+      expect(controller.pages, equals(1));
+      expect(controller.orderedRows, orderedEquals([rows[1]]));
+      expect(controller.count, equals(2));
+    });
+  });
 }
 
 bool _match(String keyword, RowData row) {

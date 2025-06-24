@@ -343,3 +343,132 @@ final class TableDataController extends TableRowController
     return rowData![columnKey];
   }
 }
+
+abstract interface class Paginator {
+  int get pageSize;
+  int get currentPage;
+  int get pages;
+
+  set pageSize(int value);
+
+  void goToPage(int page);
+  void nextPage();
+  void previousPage();
+}
+
+final class PaginatedTableDataController extends TableDataController
+    implements Paginator {
+  PaginatedTableDataController({super.rows, required int pageSize})
+      : _pageSize = pageSize,
+        super(alwaysShowHeader: true);
+
+  @override
+  void pin(RowKey row) {}
+
+  @override
+  void unpin(RowKey row) {}
+
+  @override
+  void setHeaderVisibility(bool alwaysShowHeader) {}
+
+  @override
+  void reorder(RowKey from, RowKey to) {}
+
+  int _currentPage = 0;
+
+  @override
+  int get currentPage => pages == 0 ? 0 : _currentPage + 1;
+
+  int _pageSize;
+
+  @override
+  int get pageSize => _pageSize;
+
+  @override
+  set pageSize(int value) {
+    if (value == _pageSize) return;
+
+    if (value <= 0) {
+      throw ArgumentError('Page size must be greater than zero.');
+    }
+
+    _currentPage = 0; // reset to the first page when changing page size
+    _pageSize = value;
+    notify();
+  }
+
+  @override
+  void performSearch(
+      {required String keyword, required RowDataMatcher matcher}) {
+    final shouldNotify = _searcher.perform(
+      keyword,
+      matcher: matcher,
+    );
+
+    if (!shouldNotify) return;
+
+    // always reset to the first page after searching
+    // reduce the complexity of syncing the pagination state with the search results
+    _currentPage = 0;
+    notify();
+  }
+
+  @override
+  int get pages {
+    return (dataCount + _pageSize - 1) ~/ _pageSize;
+  }
+
+  @override
+  int toDataRow(int vicinityRow) {
+    return _currentPage * pageSize + vicinityRow - 1;
+  }
+
+  @override
+  int toVicinityRow(int dataRow) {
+    return (dataRow % pageSize) + 1;
+  }
+
+  @override
+  int get count {
+    if (dataCount == 0) {
+      return 1; // only the header row
+    }
+
+    final int currentPageDataCount;
+
+    if ((_currentPage + 1) * pageSize <= dataCount) {
+      currentPageDataCount = pageSize;
+    } else {
+      currentPageDataCount = dataCount % pageSize;
+    }
+
+    return currentPageDataCount + 1; // +1 for the header row
+  }
+
+  @override
+  void goToPage(int page) {
+    final legalPage = page.clamp(0, pages - 1);
+    if (legalPage == _currentPage) return;
+
+    _currentPage = legalPage;
+    notify();
+  }
+
+  @override
+  void nextPage() {
+    final next = _currentPage + 1;
+
+    if (next < pages) {
+      goToPage(next);
+    }
+  }
+
+  @override
+  void previousPage() {
+    final previous = _currentPage - 1;
+
+    if (previous >= 0) {
+      goToPage(previous);
+    }
+  }
+}

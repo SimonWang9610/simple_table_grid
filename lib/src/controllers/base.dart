@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/custom_render/table_grid_view.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/controllers/column_controller.dart';
 import 'package:simple_table_grid/src/controllers/focuser.dart';
@@ -13,6 +14,9 @@ abstract base class TableController with ChangeNotifier {
   TableIndexFinder get finder;
 
   TableInternalController get internal;
+
+  /// If the controller supports pagination, this will return the paginator.
+  Paginator? get paginator => null;
 
   int get columnCount => columns.count;
   int get pinnedColumnCount => columns.pinnedCount;
@@ -65,6 +69,33 @@ abstract base class TableController with ChangeNotifier {
         columns: columns,
         initialRows: initialRows,
         alwaysShowHeader: alwaysShowHeader,
+        defaultRowExtent: defaultRowExtent,
+        defaultColumnExtent: defaultColumnExtent,
+        rowExtents: rowExtents,
+        columnExtents: columnExtents,
+        selectionStrategies: selectionStrategies,
+        hoveringStrategies: hoveringStrategies,
+      );
+
+  /// Creates a new [TableController] with pagination support.
+  /// This controller does not support pin/unpin/reorder/setHeaderVisibility operations.
+  factory TableController.paginated({
+    required int pageSize,
+    required List<ColumnKey> columns,
+    List<ColumnKey> pinnedColumns = const [],
+    List<RowData> initialRows = const [],
+    required Extent defaultRowExtent,
+    required Extent defaultColumnExtent,
+    Map<int, Extent>? rowExtents,
+    Map<ColumnKey, Extent>? columnExtents,
+    List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
+    List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
+  }) =>
+      _PaginatedControllerImpl(
+        pageSize: pageSize,
+        columns: columns,
+        pinnedColumns: pinnedColumns,
+        initialRows: initialRows,
         defaultRowExtent: defaultRowExtent,
         defaultColumnExtent: defaultColumnExtent,
         rowExtents: rowExtents,
@@ -265,5 +296,162 @@ final class _ControllerImpl extends TableController
 
   bool isRowPinned(int vicinityRow) {
     return vicinityRow < data.pinnedCount;
+  }
+}
+
+final class _PaginatedControllerImpl extends TableController
+    implements TableInternalController, TableIndexFinder {
+  late final PaginatedTableDataController data;
+  late final TableHeaderController header;
+  late final TableExtentController extent;
+  late final TableFocusController focus;
+  _PaginatedControllerImpl({
+    required int pageSize,
+    required List<ColumnKey> columns,
+    List<ColumnKey> pinnedColumns = const [],
+    List<RowData> initialRows = const [],
+    required Extent defaultRowExtent,
+    required Extent defaultColumnExtent,
+    Map<int, Extent>? rowExtents,
+    Map<ColumnKey, Extent>? columnExtents,
+    List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
+    List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
+  }) : super._() {
+    extent = TableExtentController(
+      finder: this,
+      defaultRowExtent: defaultRowExtent,
+      defaultColumnExtent: defaultColumnExtent,
+      rowExtents: rowExtents,
+      columnExtents: columnExtents,
+    )..bind(this);
+
+    data = PaginatedTableDataController(
+      pageSize: pageSize,
+      rows: initialRows,
+    )..bind(this);
+
+    header = TableHeaderController(columns, pinnedColumns)..bind(this);
+
+    focus = TableFocusController(
+      selectionStrategies: selectionStrategies,
+      hoveringStrategies: hoveringStrategies,
+    )..bind(this);
+  }
+
+  @override
+  void dispose() {
+    extent.dispose();
+    data.dispose();
+    header.dispose();
+    focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  TableRowController get rows => data;
+
+  @override
+  TableColumnController get columns => header;
+
+  @override
+  TableFocusController get focuser => focus;
+
+  @override
+  TableSizer get sizer => extent;
+
+  @override
+  TableInternalController get internal => this;
+
+  @override
+  TableIndexFinder get finder => this;
+
+  @override
+  Paginator get paginator => data as Paginator;
+
+  @override
+  Listenable? getCellFocusNotifier(ChildVicinity vicinity) {
+    if (data.isHeaderRow(vicinity.row)) {
+      return focus.columnFocusNotifier;
+    } else {
+      return focus.cellFocusNotifier;
+    }
+  }
+
+  @override
+  T getCellDetail<T extends CellDetail>(ChildVicinity vicinity) {
+    final columnKey = getColumnKey(vicinity.column);
+
+    if (data.isHeaderRow(vicinity.row)) {
+      return TableHeaderDetail(
+        columnKey: columnKey,
+        isPinned: isColumnPinned(vicinity.column),
+        selected: focus.isColumnSelected(columnKey),
+        hovering: focus.isColumnHovering(columnKey),
+      ) as T;
+    }
+
+    final rowKey = data.getRowKey(vicinity.row);
+
+    return TableCellDetail(
+      columnKey: columnKey,
+      rowKey: rowKey,
+      isPinned: false,
+      selected: focus.isCellSelected(
+        rowKey,
+        columnKey,
+      ),
+      hovering: focus.isCellHovering(
+        rowKey,
+        columnKey,
+      ),
+      cellData: data.getCellData(
+        rowKey,
+        columnKey,
+      ),
+    ) as T;
+  }
+
+  @override
+  int getRowIndex(RowKey key) {
+    return data.getRowIndex(key);
+  }
+
+  @override
+  RowKey? getRowKey(int index) {
+    return data.getRowKey(index);
+  }
+
+  @override
+  RowKey? previousRow(RowKey key) {
+    return data.previous(key);
+  }
+
+  @override
+  RowKey? nextRow(RowKey key) {
+    return data.next(key);
+  }
+
+  @override
+  int? getColumnIndex(ColumnKey key) {
+    return header.getColumnIndex(key);
+  }
+
+  @override
+  ColumnKey getColumnKey(int index) {
+    return header.getColumnKey(index);
+  }
+
+  @override
+  ColumnKey? previousColumn(ColumnKey key) {
+    return header.previous(key);
+  }
+
+  @override
+  ColumnKey? nextColumn(ColumnKey key) {
+    return header.next(key);
+  }
+
+  bool isColumnPinned(int vicinityColumn) {
+    return vicinityColumn < header.pinnedCount;
   }
 }
