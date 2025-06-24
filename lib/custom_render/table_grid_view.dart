@@ -3,8 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/custom_render/delegate.dart';
 import 'package:simple_table_grid/custom_render/viewport.dart';
 
-import 'layout_extent_delegate.dart';
-
 extension ChildVicinityGridExt on ChildVicinity {
   int get row => yIndex;
   int get column => xIndex;

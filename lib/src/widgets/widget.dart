@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:simple_table_grid/custom_render/delegate.dart';
+import 'package:simple_table_grid/custom_render/table_grid_view.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 import 'package:simple_table_grid/src/widgets/cell_detail_widget.dart';
 
@@ -10,31 +12,26 @@ class TableGrid extends StatefulWidget {
   final ScrollController? verticalScrollController;
   final ScrollPhysics? horizontalScrollPhysics;
   final ScrollPhysics? verticalScrollPhysics;
+
+  /// The cell detail builder for the table cells.
   final TableCellDetailBuilder<TableCellDetail> builder;
+
+  /// The header detail builder for the table headers.
   final TableCellDetailBuilder<TableHeaderDetail> headerBuilder;
   final TableGridThemeData theme;
 
-  /// Whether to allow resizing of columns.
-  ///
-  /// If the extent of the dragging column does not accept the delta,
-  /// it will not change the extent.
-  ///
-  /// Typically, the column extent must be [Extent.range] to accept the delta.
   final bool resizeColumn;
-
-  /// Whether to allow resizing of rows.
-  ///
-  /// If the extent of the dragging row does not accept the delta,
-  /// it will not change the extent.
-  ///
-  /// Typically, the row extent must be [Extent.range] to accept the delta.
-  final bool resizeRow;
 
   /// Whether to allow reordering of columns by dragging.
   final bool reorderColumn;
 
   /// Whether to allow reordering of rows by dragging.
+  /// only works if the [TableController.paginator] is null.
   final bool reorderRow;
+
+  /// Whether to allow resizing of rows by dragging.
+  /// only works if the [TableController.paginator] is null.
+  final bool resizeRow;
 
   const TableGrid({
     super.key,
@@ -48,8 +45,8 @@ class TableGrid extends StatefulWidget {
     this.verticalScrollPhysics,
     this.resizeColumn = true,
     this.reorderColumn = true,
-    this.resizeRow = false,
     this.reorderRow = false,
+    this.resizeRow = false,
   });
 
   @override
@@ -57,6 +54,8 @@ class TableGrid extends StatefulWidget {
 }
 
 class _TableGridState extends State<TableGrid> {
+  late final TableGridSizedBuilderDelegate _delegate;
+
   ScrollController? _horizontalFallbackController;
   ScrollController? _verticalFallbackController;
 
@@ -69,51 +68,63 @@ class _TableGridState extends State<TableGrid> {
       (_verticalFallbackController ??= ScrollController());
 
   @override
+  void initState() {
+    super.initState();
+    _delegate = TableGridSizedBuilderDelegate(
+      columnCount: widget.controller.columnCount,
+      rowCount: widget.controller.rowCount,
+      pinnedColumnCount: widget.controller.pinnedColumnCount,
+      pinnedRowCount: widget.controller.pinnedRowCount,
+      sizer: widget.controller.sizer,
+      builder: _delegateBuilder,
+    );
+
+    widget.controller.addListener(_syncController);
+  }
+
+  @override
+  void didUpdateWidget(covariant TableGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_syncController);
+      widget.controller.addListener(_syncController);
+      _syncController();
+    }
+  }
+
+  @override
   void dispose() {
+    widget.controller.removeListener(_syncController);
     _horizontalFallbackController?.dispose();
     _verticalFallbackController?.dispose();
     super.dispose();
   }
 
+  void _syncController() {
+    _delegate.update(
+      columnCount: widget.controller.columnCount,
+      rowCount: widget.controller.rowCount,
+      pinnedColumnCount: widget.controller.pinnedColumnCount,
+      pinnedRowCount: widget.controller.pinnedRowCount,
+      sizer: widget.controller.sizer,
+      alwaysNotify: true,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final grid = ListenableBuilder(
-      listenable: widget.controller,
-      builder: (_, __) {
-        return TableGridView.builder(
-          mainAxis: Axis.horizontal,
-          horizontalDetails: ScrollableDetails.horizontal(
-            controller: _effectiveHorizontalScrollController,
-            physics:
-                widget.horizontalScrollPhysics ?? const ClampingScrollPhysics(),
-          ),
-          verticalDetails: ScrollableDetails.vertical(
-            controller: _effectiveVerticalScrollController,
-            physics:
-                widget.verticalScrollPhysics ?? const ClampingScrollPhysics(),
-          ),
-          columnCount: widget.controller.columnCount,
-          rowCount: widget.controller.rowCount,
-          pinnedColumnCount: widget.controller.pinnedColumnCount,
-          pinnedRowCount: widget.controller.pinnedRowCount,
-          rowExtentBuilder: (index) {
-            return widget.controller.sizer.getRowExtent(index);
-          },
-          columnExtentBuilder: (index) {
-            return widget.controller.sizer.getColumnExtent(index);
-          },
-          builder: (_, vicinity) {
-            final listenable =
-                widget.controller.internal.getCellFocusNotifier(vicinity);
-            return listenable == null
-                ? _buildCell(context, vicinity)
-                : ListenableBuilder(
-                    listenable: listenable,
-                    builder: (ctx, _) => _buildCell(ctx, vicinity),
-                  );
-          },
-        );
-      },
+    final grid = TableGridView(
+      delegate: _delegate,
+      mainAxis: Axis.horizontal,
+      horizontalDetails: ScrollableDetails.horizontal(
+        controller: _effectiveHorizontalScrollController,
+        physics:
+            widget.horizontalScrollPhysics ?? const ClampingScrollPhysics(),
+      ),
+      verticalDetails: ScrollableDetails.vertical(
+        controller: _effectiveVerticalScrollController,
+        physics: widget.verticalScrollPhysics ?? const ClampingScrollPhysics(),
+      ),
     );
 
     final bar = Scrollbar(
@@ -128,6 +139,17 @@ class _TableGridState extends State<TableGrid> {
       controller: _effectiveHorizontalScrollController,
       child: bar,
     );
+  }
+
+  Widget _delegateBuilder(BuildContext context, ChildVicinity vicinity) {
+    final listenable =
+        widget.controller.internal.getCellFocusNotifier(vicinity);
+    return listenable == null
+        ? _buildCell(context, vicinity)
+        : ListenableBuilder(
+            listenable: listenable,
+            builder: (ctx, _) => _buildCell(ctx, vicinity),
+          );
   }
 
   Widget _buildCell(
@@ -156,8 +178,10 @@ class _TableGridState extends State<TableGrid> {
           detail: detail,
           isRightEdge: rightEdge,
           isBottomEdge: bottomEdge,
-          dragEnabled: widget.reorderRow,
-          resizeEnabled: widget.resizeRow,
+          dragEnabled:
+              widget.controller.paginator == null ? widget.reorderRow : false,
+          resizeEnabled:
+              widget.controller.paginator == null ? widget.resizeRow : false,
           cursorDelegate: widget.controller.sizer as TableCursorDelegate,
           builder: widget.builder,
           onReorder: (from, to) {

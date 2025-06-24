@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
-import 'package:simple_table_grid/custom_render/layout_extent_delegate.dart';
+import 'package:simple_table_grid/custom_render/delegate.dart';
 
 class RenderTableGridViewport extends RenderTwoDimensionalViewport {
   RenderTableGridViewport({
