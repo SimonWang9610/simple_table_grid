@@ -43,11 +43,25 @@ abstract base class TableColumnController {
 
 final class TableHeaderController extends TableColumnController
     with TableControllerCoordinator {
-  TableHeaderController(List<ColumnKey>? columns) {
+  TableHeaderController(
+    List<ColumnKey>? columns,
+    List<ColumnKey>? pinnedColumns,
+  ) {
+    assert(
+      () {
+        if (pinnedColumns == null || columns == null) return true;
+
+        final intersected = columns.toSet().intersection(pinnedColumns.toSet());
+        return intersected.isEmpty;
+      }(),
+      "Duplicate columns found in pinned and non-pinned lists",
+    );
+
     _nonPinnedOrdering = KeyOrdering.efficient(columns ?? <ColumnKey>[]);
+    _pinnedOrdering = KeyOrdering.efficient(pinnedColumns ?? <ColumnKey>[]);
   }
 
-  final _pinnedOrdering = KeyOrdering.efficient(<ColumnKey>[]);
+  late final KeyOrdering<ColumnKey> _pinnedOrdering;
   late final KeyOrdering<ColumnKey> _nonPinnedOrdering;
 
   @override

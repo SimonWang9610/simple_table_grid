@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 import 'package:simple_table_grid/src/widgets/auto_cursor_region.dart';
@@ -52,19 +53,19 @@ class DraggableCellWidget<T extends CellDetail> extends StatelessWidget {
 const _defaultSize = Size(100, 50);
 
 class CellDetailWidget<T extends CellDetail> extends StatefulWidget {
-  final Border? border;
-  final EdgeInsets? padding;
   final T detail;
   final TableCursorDelegate cursorDelegate;
   final TableCellDetailBuilder<T> builder;
   final DragCellCallback<T>? onReorder;
   final bool dragEnabled;
   final bool resizeEnabled;
+  final bool isRightEdge;
+  final bool isBottomEdge;
 
   const CellDetailWidget({
     super.key,
-    this.border,
-    this.padding,
+    required this.isRightEdge,
+    required this.isBottomEdge,
     required this.dragEnabled,
     required this.resizeEnabled,
     required this.cursorDelegate,
@@ -95,6 +96,23 @@ class _CellDetailWidgetState<T extends CellDetail>
   Widget build(BuildContext context) {
     _updateCellSize();
 
+    final gridTheme = TableGridTheme.of(context);
+
+    final padding = gridTheme.border?.calculatePadding(
+      widget.isRightEdge,
+      widget.isBottomEdge,
+    );
+
+    final border = gridTheme.border?.calculateBorder(
+      widget.isRightEdge,
+      widget.isBottomEdge,
+    );
+
+    final cellTheme = switch (widget.detail) {
+      TableHeaderDetail() => gridTheme.headerTheme,
+      TableCellDetail() => gridTheme.cellTheme,
+    };
+
     Widget child = widget.builder(context, widget.detail);
 
     if (widget.dragEnabled && widget.onReorder != null) {
@@ -117,21 +135,24 @@ class _CellDetailWidgetState<T extends CellDetail>
       );
     }
 
-    if (widget.padding != null) {
+    if (padding != null) {
       child = Padding(
-        padding: widget.padding!,
+        padding: padding,
         child: child,
       );
     }
 
-    if (widget.border != null) {
-      child = DecoratedBox(
-        decoration: BoxDecoration(
-          border: widget.border,
-        ),
-        child: child,
-      );
-    }
+    child = DecoratedBox(
+      decoration: BoxDecoration(
+        border: border,
+        color: widget.detail.selected
+            ? cellTheme.selectedColor
+            : widget.detail.hovering
+                ? cellTheme.hoveringColor
+                : cellTheme.unselectedColor,
+      ),
+      child: child,
+    );
 
     if (!widget.resizeEnabled && !widget.dragEnabled) {
       return child;
