@@ -38,8 +38,10 @@ sealed class CellDetail {
 }
 
 final class TableHeaderDetail extends CellDetail {
+  final dynamic data;
   const TableHeaderDetail({
     required super.columnKey,
+    required this.data,
     super.isPinned = false,
     super.selected = false,
     super.hovering = false,
@@ -52,7 +54,8 @@ final class TableHeaderDetail extends CellDetail {
     return other.columnKey == columnKey &&
         other.isPinned == isPinned &&
         other.selected == selected &&
-        other.hovering == hovering;
+        other.hovering == hovering &&
+        other.data == data;
   }
 
   @override
@@ -60,11 +63,12 @@ final class TableHeaderDetail extends CellDetail {
       columnKey.hashCode ^
       isPinned.hashCode ^
       selected.hashCode ^
-      hovering.hashCode;
+      hovering.hashCode ^
+      data.hashCode;
 
   @override
   String toString() {
-    return 'TableHeaderDetail(columnKey: $columnKey, isPinned: $isPinned, selected: $selected, hovering: $hovering)';
+    return 'TableHeaderDetail(columnKey: $columnKey, isPinned: $isPinned, selected: $selected, hovering: $hovering, data: $data)';
   }
 }
 

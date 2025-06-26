@@ -125,7 +125,7 @@ class _CellDetailWidgetState<T extends CellDetail>
         },
         child: DraggableCellWidget<T>(
           detail: widget.detail,
-          feedback: _buildFeedback(child),
+          feedback: _buildFeedback(child, cellTheme),
           onAccept: widget.onReorder!,
           onDragStarted: () => widget.cursorDelegate.setDragging(true),
           onDragEnd: () => widget.cursorDelegate.setDragging(false),
@@ -192,7 +192,7 @@ class _CellDetailWidgetState<T extends CellDetail>
     );
   }
 
-  Widget _buildFeedback(Widget child) {
+  Widget _buildFeedback(Widget child, CellTheme cellTheme) {
     return ValueListenableBuilder(
       valueListenable: _size,
       builder: (_, size, __) {
@@ -200,7 +200,12 @@ class _CellDetailWidgetState<T extends CellDetail>
           size: size ?? _defaultSize,
           child: Material(
             color: Colors.transparent,
-            child: child,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: cellTheme.hoveringColor,
+              ),
+              child: child,
+            ),
           ),
         );
       },

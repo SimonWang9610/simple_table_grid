@@ -96,3 +96,22 @@ class RowData {
   @override
   int get hashCode => key.hashCode ^ data.hashCode;
 }
+
+class HeaderData<T> {
+  final ColumnKey key;
+  final T? data;
+
+  const HeaderData({
+    required this.key,
+    this.data,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is HeaderData && other.key == key && other.data == data;
+  }
+
+  @override
+  int get hashCode => key.hashCode ^ data.hashCode;
+}

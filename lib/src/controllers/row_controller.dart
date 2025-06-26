@@ -19,6 +19,10 @@ abstract base class TableRowController {
   /// Remove a single row with the given key.
   void remove(RowKey row);
 
+  /// Update rows with the given list of [rows] if their keys match existing rows.
+  /// If [replaceAll] is true, all existing rows would be cleared and replaced with the new rows.
+  void updateAll(List<RowData> rows, {bool replaceAll = false});
+
   /// Perform a sort on the rows by using the provided [compare] function.
   ///
   /// ALl pinned rows will be kept at the top of the list.
@@ -31,6 +35,8 @@ abstract base class TableRowController {
     List<RowData>? newRows,
   });
 
+  /// Perform a search on the existing rows by using the provided [keyword] and [matcher].
+  /// if [keyword] is empty, the search will behave like [undoSearch].
   void performSearch({
     required String keyword,
     required RowDataMatcher matcher,
@@ -193,6 +199,23 @@ final class TableDataController extends TableRowController
   }
 
   @override
+  void updateAll(List<RowData> rows, {bool replaceAll = false}) {
+    bool shouldNotify = false;
+
+    if (replaceAll) {
+      _rows.clear();
+      _searcher.clear();
+      shouldNotify == true;
+    }
+
+    shouldNotify |= _addAll(rows);
+
+    if (shouldNotify) {
+      notify();
+    }
+  }
+
+  @override
   void pin(RowKey row) {
     if (!_rows.containsKey(row)) return;
     _searcher.pin(row);
@@ -243,13 +266,9 @@ final class TableDataController extends TableRowController
     bool shouldNotify = false;
 
     for (final row in rows) {
-      if (_rows.containsKey(row.key)) {
-        // If the row already exists, skip it
-        continue;
-      }
-
       _rows[row.key] = row;
       _searcher.add(row);
+
       shouldNotify = true;
     }
 
@@ -398,8 +417,10 @@ final class PaginatedTableDataController extends TableDataController
   }
 
   @override
-  void performSearch(
-      {required String keyword, required RowDataMatcher matcher}) {
+  void performSearch({
+    required String keyword,
+    required RowDataMatcher matcher,
+  }) {
     final shouldNotify = _searcher.perform(
       keyword,
       matcher: matcher,
@@ -411,6 +432,12 @@ final class PaginatedTableDataController extends TableDataController
     // reduce the complexity of syncing the pagination state with the search results
     _currentPage = 0;
     notify();
+  }
+
+  @override
+  void updateAll(List<RowData> rows, {bool replaceAll = false}) {
+    _currentPage = 0; // reset to the first page when updating rows
+    super.updateAll(rows, replaceAll: replaceAll);
   }
 
   @override

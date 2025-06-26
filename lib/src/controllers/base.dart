@@ -54,7 +54,7 @@ abstract base class TableController with ChangeNotifier {
   /// When building the cell widget, [CellDetail] would provide the hovering and selection state
   /// for the cell.
   factory TableController({
-    required List<ColumnKey> columns,
+    required List<HeaderData> columns,
     List<ColumnKey> pinnedColumns = const [],
     List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
@@ -67,6 +67,7 @@ abstract base class TableController with ChangeNotifier {
   }) =>
       _ControllerImpl(
         columns: columns,
+        pinnedColumns: pinnedColumns,
         initialRows: initialRows,
         alwaysShowHeader: alwaysShowHeader,
         defaultRowExtent: defaultRowExtent,
@@ -81,7 +82,7 @@ abstract base class TableController with ChangeNotifier {
   /// This controller does not support pin/unpin/reorder/setHeaderVisibility operations.
   factory TableController.paginated({
     required int pageSize,
-    required List<ColumnKey> columns,
+    required List<HeaderData> columns,
     List<ColumnKey> pinnedColumns = const [],
     List<RowData> initialRows = const [],
     required Extent defaultRowExtent,
@@ -148,7 +149,7 @@ final class _ControllerImpl extends TableController
   late final TableFocusController focus;
 
   _ControllerImpl({
-    required List<ColumnKey> columns,
+    required List<HeaderData> columns,
     List<ColumnKey> pinnedColumns = const [],
     List<RowData> initialRows = const [],
     bool alwaysShowHeader = true,
@@ -226,6 +227,7 @@ final class _ControllerImpl extends TableController
         isPinned: isColumnPinned(vicinity.column),
         selected: focus.isColumnSelected(columnKey),
         hovering: focus.isColumnHovering(columnKey),
+        data: header.getHeaderData(columnKey),
       ) as T;
     }
 
@@ -307,7 +309,7 @@ final class _PaginatedControllerImpl extends TableController
   late final TableFocusController focus;
   _PaginatedControllerImpl({
     required int pageSize,
-    required List<ColumnKey> columns,
+    required List<HeaderData> columns,
     List<ColumnKey> pinnedColumns = const [],
     List<RowData> initialRows = const [],
     required Extent defaultRowExtent,
@@ -387,6 +389,7 @@ final class _PaginatedControllerImpl extends TableController
         isPinned: isColumnPinned(vicinity.column),
         selected: focus.isColumnSelected(columnKey),
         hovering: focus.isColumnHovering(columnKey),
+        data: header.getHeaderData(columnKey),
       ) as T;
     }
 

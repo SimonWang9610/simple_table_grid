@@ -5,10 +5,10 @@ abstract base class TableColumnController {
   /// Adds a list of columns to the controller.
   /// If a column already exists, it will be ignored.
   /// Notifies listeners if any new columns were added.
-  void addAll(List<ColumnKey> columns);
+  void addAll(List<HeaderData> columns);
 
   /// Adds a single column to the controller.
-  void add(ColumnKey column);
+  void add(HeaderData column);
 
   /// Removes a list of columns from the controller.
   /// Notifies listeners if any columns were removed.
@@ -39,27 +39,48 @@ abstract base class TableColumnController {
 
   /// Returns the current ordering of columns.
   List<ColumnKey> get ordered;
+
+  dynamic getHeaderData(ColumnKey key);
 }
 
 final class TableHeaderController extends TableColumnController
     with TableControllerCoordinator {
   TableHeaderController(
-    List<ColumnKey>? columns,
+    List<HeaderData>? columns,
     List<ColumnKey>? pinnedColumns,
   ) {
     assert(
       () {
         if (pinnedColumns == null || columns == null) return true;
 
-        final intersected = columns.toSet().intersection(pinnedColumns.toSet());
-        return intersected.isEmpty;
+        final allSet = columns.map((e) => e.key).toSet();
+
+        for (final column in pinnedColumns) {
+          if (!allSet.contains(column)) {
+            return false; // Duplicate found
+          }
+        }
+
+        return true;
       }(),
       "Duplicate columns found in pinned and non-pinned lists",
     );
 
-    _nonPinnedOrdering = KeyOrdering.efficient(columns ?? <ColumnKey>[]);
+    final nonPinned = <ColumnKey>[];
+
+    for (final column in columns ?? <HeaderData>[]) {
+      _columns[column.key] = column;
+
+      if (pinnedColumns == null || !pinnedColumns.contains(column.key)) {
+        nonPinned.add(column.key);
+      }
+    }
+
+    _nonPinnedOrdering = KeyOrdering.efficient(nonPinned);
     _pinnedOrdering = KeyOrdering.efficient(pinnedColumns ?? <ColumnKey>[]);
   }
+
+  final _columns = <ColumnKey, HeaderData>{};
 
   late final KeyOrdering<ColumnKey> _pinnedOrdering;
   late final KeyOrdering<ColumnKey> _nonPinnedOrdering;
@@ -77,17 +98,21 @@ final class TableHeaderController extends TableColumnController
   int get pinnedCount => _pinnedOrdering.length;
 
   @override
-  void addAll(List<ColumnKey> columns) {
+  void addAll(List<HeaderData> columns) {
     if (columns.isEmpty) return;
 
     bool shouldNotify = false;
 
-    for (final key in columns) {
-      if (_pinnedOrdering.contains(key) || _nonPinnedOrdering.contains(key)) {
-        continue;
+    for (final column in columns) {
+      _columns[column.key] = column;
+
+      if (_pinnedOrdering.contains(column.key) ||
+          _nonPinnedOrdering.contains(column.key)) {
+        continue; // Column already exists, skip adding
       }
 
-      _nonPinnedOrdering.add(key);
+      _nonPinnedOrdering.add(column.key);
+
       shouldNotify = true;
     }
 
@@ -97,7 +122,7 @@ final class TableHeaderController extends TableColumnController
   }
 
   @override
-  void add(ColumnKey column) {
+  void add(HeaderData column) {
     addAll([column]);
   }
 
@@ -236,5 +261,10 @@ final class TableHeaderController extends TableColumnController
     }
 
     return null; // Key not found
+  }
+
+  @override
+  dynamic getHeaderData(ColumnKey key) {
+    return _columns[key]?.data;
   }
 }

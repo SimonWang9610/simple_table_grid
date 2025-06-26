@@ -12,7 +12,7 @@ base mixin TableCursorDelegate on TableSizer {
   ResizeDirection? _resizeDirection;
 
   MouseCursor getCursor({
-    double threshold = 0.1,
+    double threshold = 0.05,
     Offset? offset,
     required Axis direction,
   }) {
