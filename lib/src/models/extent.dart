@@ -12,8 +12,8 @@ sealed class Extent {
     double? max,
     required double pixels,
   }) = _RangeExtent;
-  const factory Extent.fractional(double fraction) = _FractionalExtent;
-  const factory Extent.remaining() = _RemainingExtent;
+  // const factory Extent.fractional(double fraction) = _FractionalExtent;
+  // const factory Extent.remaining() = _RemainingExtent;
 
   double calculate(
     double viewportExtent, {
