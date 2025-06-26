@@ -5,7 +5,13 @@ import 'package:simple_table_grid/src/controllers/column_controller.dart';
 
 void main() {
   final pinned = List.generate(2, (index) => ColumnKey('Pinned$index'));
-  final nonPinned = List.generate(3, (index) => ColumnKey('NonPinned$index'));
+  final nonPinned = List.generate(
+    3,
+    (index) => HeaderData(
+      key: ColumnKey('NonPinned$index'),
+      data: index,
+    ),
+  );
 
   group("addAll", () {
     test("addAll without preset pinned", () {
@@ -51,7 +57,7 @@ void main() {
       expect(controller.pinnedCount, equals(0));
       expect(controller.count, equals(3));
 
-      controller.removeAll(nonPinned);
+      controller.removeAll(nonPinned.map((e) => e.key).toList());
       expect(controller.pinnedCount, equals(0));
       expect(controller.count, equals(0));
     });
@@ -62,7 +68,7 @@ void main() {
       expect(controller.pinnedCount, equals(2));
       expect(controller.count, equals(5));
 
-      controller.removeAll(nonPinned);
+      controller.removeAll(nonPinned.map((e) => e.key).toList());
       expect(controller.pinnedCount, equals(2));
       expect(controller.count, equals(2));
 
@@ -155,12 +161,12 @@ void main() {
     });
 
     test("index of non-pinned column", () {
-      expect(controller.previous(nonPinned[1]), equals(nonPinned[0]));
-      expect(controller.next(nonPinned[0]), equals(nonPinned[1]));
+      expect(controller.previous(nonPinned[1].key), equals(nonPinned[0]));
+      expect(controller.next(nonPinned[0].key), equals(nonPinned[1]));
     });
 
     test("index of crossed area", () {
-      expect(controller.previous(nonPinned[0]), equals(pinned[1]));
+      expect(controller.previous(nonPinned[0].key), equals(pinned[1]));
       expect(controller.next(pinned[1]), equals(nonPinned[0]));
     });
 
@@ -175,9 +181,9 @@ void main() {
     test("getColumnIndex by key", () {
       expect(controller.getColumnIndex(pinned[0]), equals(0));
       expect(controller.getColumnIndex(pinned[1]), equals(1));
-      expect(controller.getColumnIndex(nonPinned[0]), equals(2));
-      expect(controller.getColumnIndex(nonPinned[1]), equals(3));
-      expect(controller.getColumnIndex(nonPinned[2]), equals(4));
+      expect(controller.getColumnIndex(nonPinned[0].key), equals(2));
+      expect(controller.getColumnIndex(nonPinned[1].key), equals(3));
+      expect(controller.getColumnIndex(nonPinned[2].key), equals(4));
     });
   });
 }

@@ -76,6 +76,45 @@ void main() {
     });
   });
 
+  group("updateAll", () {
+    test("update existing rows", () {
+      final controller = TableDataController(rows: rows);
+
+      expect(controller.dataCount, equals(5));
+
+      final updatedRows = [
+        RowData(RowKey('Row0'), data: {
+          ColumnKey('Column1'): 'UpdatedC01',
+          ColumnKey('Column2'): 'UpdatedC02',
+        }),
+      ];
+
+      controller.updateAll(updatedRows);
+
+      expect(controller.dataCount, equals(5));
+      expect(
+        controller.orderedRows.first.data[ColumnKey('Column1')],
+        equals('UpdatedC01'),
+      );
+    });
+
+    test("replace All", () {
+      final controller = TableDataController(rows: rows);
+
+      expect(controller.dataCount, equals(5));
+
+      final newRow = RowData(RowKey('Replaced'), data: {
+        ColumnKey('Column1'): 'C51',
+        ColumnKey('Column2'): 'C52',
+      });
+
+      controller.updateAll([newRow], replaceAll: true);
+
+      expect(controller.dataCount, equals(1));
+      expect(controller.orderedRows.first.key, equals(RowKey('Replaced')));
+    });
+  });
+
   group("pin/unpin", () {
     test("pin/unpin a row with header always", () {
       final controller = TableDataController(rows: rows);
