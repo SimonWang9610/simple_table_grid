@@ -73,6 +73,10 @@ extension ToColumnKeyExt on CustomDataGridModel {
   ColumnKey get columnKey => ColumnKey(columnName);
 
   Extent buildExtent({double min = 100, double? max}) {
+    if (!allowResizing) {
+      return Extent.fixed(width);
+    }
+
     return Extent.range(
       pixels: width,
       min: min,

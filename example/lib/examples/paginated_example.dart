@@ -17,18 +17,34 @@ class _PaginatedExampleState extends State<PaginatedExample> {
         isDisplayed: true,
         width: 100,
         position: 0,
-        isPinned: true),
+        isPinned: true,
+        allowResizing: false),
     CustomDataGridModel(
-        columnName: 'Surname', isDisplayed: true, width: 200, position: 1),
+      columnName: 'Surname',
+      isDisplayed: true,
+      width: 200,
+      position: 1,
+      allowFiltering: true,
+    ),
     CustomDataGridModel(
-        columnName: 'GivenName', isDisplayed: true, width: 200, position: 2),
+      columnName: 'GivenName',
+      isDisplayed: true,
+      width: 200,
+      position: 2,
+      allowSorting: true,
+    ),
     CustomDataGridModel(
-        columnName: 'PhoneNumber', isDisplayed: true, width: 200, position: 4),
+      columnName: 'PhoneNumber',
+      isDisplayed: true,
+      width: 200,
+      position: 4,
+    ),
     CustomDataGridModel(
-        columnName: 'CardAssignments',
-        isDisplayed: true,
-        width: 400,
-        position: 5),
+      columnName: 'CardAssignments',
+      isDisplayed: true,
+      width: 400,
+      position: 5,
+    ),
     CustomDataGridModel(
         columnName: 'BadgeType', isDisplayed: true, width: 400, position: 6),
     CustomDataGridModel(
@@ -63,7 +79,7 @@ class _PaginatedExampleState extends State<PaginatedExample> {
     }
 
     _tableController = TableController.paginated(
-      pageSize: 10,
+      pageSize: 5,
       columns: columns,
       pinnedColumns: pinnedColumns,
       defaultRowExtent: Extent.range(pixels: 80, min: 60, max: 100),
@@ -268,9 +284,12 @@ class _CellWidget extends StatelessWidget {
         as CustomDataGridModel;
 
     if (headerData.columnName == "Menu") {
-      return IconButton(
-        onPressed: () {},
-        icon: Icon(Icons.menu),
+      return InkWell(
+        onTap: () {},
+        child: Icon(
+          Icons.more_vert,
+          size: 16,
+        ),
       );
     }
 
@@ -315,6 +334,8 @@ class _HeaderWidgetState extends State<_HeaderWidget> {
   Widget build(BuildContext context) {
     final data = widget.detail.data as CustomDataGridModel;
 
+    final isMenu = data.columnName == "Menu";
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
       child: Row(
@@ -333,6 +354,8 @@ class _HeaderWidgetState extends State<_HeaderWidget> {
           ),
           InkWell(
             onTap: () {
+              if (isMenu) return; // Skip if it's the menu column
+
               if (widget.detail.isPinned) {
                 widget.controller.columns.unpin(widget.detail.columnKey);
               } else {
@@ -344,32 +367,33 @@ class _HeaderWidgetState extends State<_HeaderWidget> {
               size: 14,
             ),
           ),
-          InkWell(
-            onTap: () {
-              _ascending = !_ascending;
+          if (data.allowSorting)
+            InkWell(
+              onTap: () {
+                _ascending = !_ascending;
 
-              widget.controller.rows.performSort(
-                compare: (a, b) {
-                  final aCell = a[widget.detail.columnKey];
-                  final bCell = b[widget.detail.columnKey];
+                widget.controller.rows.performSort(
+                  compare: (a, b) {
+                    final aCell = a[widget.detail.columnKey];
+                    final bCell = b[widget.detail.columnKey];
 
-                  if (aCell == null || bCell == null) {
-                    return -1; // Handle null values gracefully
-                  }
+                    if (aCell == null || bCell == null) {
+                      return -1; // Handle null values gracefully
+                    }
 
-                  if (_ascending) {
-                    return aCell.toString().compareTo(bCell.toString());
-                  } else {
-                    return bCell.toString().compareTo(aCell.toString());
-                  }
-                },
-              );
-            },
-            child: Icon(
-              Icons.arrow_upward,
-              size: 14,
-            ),
-          )
+                    if (_ascending) {
+                      return aCell.toString().compareTo(bCell.toString());
+                    } else {
+                      return bCell.toString().compareTo(aCell.toString());
+                    }
+                  },
+                );
+              },
+              child: Icon(
+                Icons.arrow_upward,
+                size: 14,
+              ),
+            )
         ],
       ),
     );
