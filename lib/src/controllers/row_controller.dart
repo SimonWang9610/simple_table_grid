@@ -95,6 +95,11 @@ abstract base class TableRowController {
 
   /// The count of data rows excluding the header row.
   int get dataCount;
+
+  List<RowData> exportRows(
+    DataExportOption option, {
+    List<RowKey> customSelected = const [],
+  });
 }
 
 final class TableDataController extends TableRowController
@@ -297,6 +302,22 @@ final class TableDataController extends TableRowController
     if (shouldNotify) {
       notify();
     }
+  }
+
+  @override
+  List<RowData> exportRows(
+    DataExportOption option, {
+    List<RowKey> customSelected = const [],
+  }) {
+    return switch (option) {
+      DataExportOption.all => orderedRows,
+      DataExportOption.current =>
+        _searcher.current.ordered.map((key) => _rows[key]!).toList(),
+      DataExportOption.custom => customSelected
+          .where((key) => _rows.containsKey(key))
+          .map((key) => _rows[key]!)
+          .toList(),
+    };
   }
 
   @override
