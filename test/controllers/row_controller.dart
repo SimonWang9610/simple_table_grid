@@ -76,28 +76,7 @@ void main() {
     });
   });
 
-  group("updateAll", () {
-    test("update existing rows", () {
-      final controller = TableDataController(rows: rows);
-
-      expect(controller.dataCount, equals(5));
-
-      final updatedRows = [
-        RowData(RowKey('Row0'), data: {
-          ColumnKey('Column1'): 'UpdatedC01',
-          ColumnKey('Column2'): 'UpdatedC02',
-        }),
-      ];
-
-      controller.updateAll(updatedRows);
-
-      expect(controller.dataCount, equals(5));
-      expect(
-        controller.orderedRows.first.data[ColumnKey('Column1')],
-        equals('UpdatedC01'),
-      );
-    });
-
+  group("edit rows", () {
     test("replace All", () {
       final controller = TableDataController(rows: rows);
 
@@ -108,10 +87,56 @@ void main() {
         ColumnKey('Column2'): 'C52',
       });
 
-      controller.updateAll([newRow], replaceAll: true);
+      controller.replaceAll([newRow]);
 
       expect(controller.dataCount, equals(1));
       expect(controller.orderedRows.first.key, equals(RowKey('Replaced')));
+    });
+
+    test("update a row: MergeColumns", () {
+      final controller = TableDataController(rows: rows);
+
+      expect(controller.dataCount, equals(5));
+
+      final update = MergeColumns(
+        RowKey('Row0'),
+        values: {
+          ColumnKey('Column1'): 'UpdatedC01',
+          ColumnKey("NewColumn"): 'NewValue',
+        },
+      );
+
+      controller.updateRow(update);
+
+      expect(controller.dataCount, equals(5));
+      expect(
+        controller.orderedRows.first.data[ColumnKey('Column1')],
+        equals('UpdatedC01'),
+      );
+
+      expect(
+        controller.orderedRows.first.data[ColumnKey('NewColumn')],
+        equals('NewValue'),
+      );
+    });
+
+    test("update a row: RemoveColumns", () {
+      final controller = TableDataController(rows: rows);
+
+      expect(controller.dataCount, equals(5));
+
+      final update = RemoveColumns(
+        RowKey('Row0'),
+        columns: [ColumnKey('Column1')],
+      );
+
+      controller.updateRow(update);
+
+      expect(controller.dataCount, equals(5));
+      expect(
+        controller.orderedRows.first.data.containsKey(ColumnKey('Column1')),
+        isFalse,
+      );
     });
   });
 

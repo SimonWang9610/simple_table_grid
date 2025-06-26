@@ -5,6 +5,7 @@ export 'src/models/misc.dart';
 export 'src/models/key.dart';
 export 'src/models/table_grid_border.dart';
 export 'src/models/extent.dart';
+export 'src/models/row_update.dart';
 
 export "src/widgets/widget.dart";
 export 'src/widgets/theme_data.dart';

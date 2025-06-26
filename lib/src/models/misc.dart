@@ -41,3 +41,5 @@ enum DataExportOption {
   current,
   custom,
 }
+
+enum DataUpdateOption { merge, replace, add, remove }

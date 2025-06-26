@@ -19,9 +19,8 @@ abstract base class TableRowController {
   /// Remove a single row with the given key.
   void remove(RowKey row);
 
-  /// Update rows with the given list of [rows] if their keys match existing rows.
-  /// If [replaceAll] is true, all existing rows would be cleared and replaced with the new rows.
-  void updateAll(List<RowData> rows, {bool replaceAll = false});
+  /// Replace all existing rows with the given [rows].
+  void replaceAll(List<RowData> rows);
 
   /// Perform a sort on the rows by using the provided [compare] function.
   ///
@@ -42,6 +41,18 @@ abstract base class TableRowController {
     required RowDataMatcher matcher,
   });
 
+  /// Use the given [update] to edit a row,
+  /// [shouldNotify] indicates whether the controller should notify listeners if [update] is applied.
+  ///
+  /// Typically, when you add/remove a [ColumnKey], you may also want to update the corresponding columns of the existing rows.
+  /// if you operate on multiple rows, you could set [shouldNotify] to false
+  /// and call [markAsDirty] at the end to notify the controller.
+  void updateRow(
+    RowUpdate update, {
+    bool shouldNotify = true,
+  });
+
+  /// Undo the last search operation.
   void undoSearch();
 
   /// Pin a row with the given key.
@@ -100,6 +111,14 @@ abstract base class TableRowController {
     DataExportOption option, {
     List<RowKey> customSelected = const [],
   });
+
+  /// Manually notify the controller that the data has changed.
+  ///
+  /// Typically it happens when some [RowData] are changed outside of the controller context,
+  /// like when a row is edited in a dialog or a cell is updated.
+  ///
+  /// This will trigger a rebuild of the table widget to reflect the changes.
+  void markAsDirty();
 }
 
 final class TableDataController extends TableRowController
@@ -204,20 +223,13 @@ final class TableDataController extends TableRowController
   }
 
   @override
-  void updateAll(List<RowData> rows, {bool replaceAll = false}) {
-    bool shouldNotify = false;
+  void replaceAll(List<RowData> rows) {
+    _rows.clear();
+    _searcher.clear();
 
-    if (replaceAll) {
-      _rows.clear();
-      _searcher.clear();
-      shouldNotify == true;
-    }
+    _addAll(rows);
 
-    shouldNotify |= _addAll(rows);
-
-    if (shouldNotify) {
-      notify();
-    }
+    notify();
   }
 
   @override
@@ -298,6 +310,34 @@ final class TableDataController extends TableRowController
   @override
   void undoSearch() {
     final shouldNotify = _searcher.undo();
+
+    if (shouldNotify) {
+      notify();
+    }
+  }
+
+  @override
+  void markAsDirty() {
+    notify();
+  }
+
+  @override
+  void updateRow(
+    RowUpdate update, {
+    bool shouldNotify = true,
+  }) {
+    assert(
+      _rows.containsKey(update.key),
+      "Row key ${update.key} is not in the data source",
+    );
+
+    final row = _rows[update.key]!;
+
+    final applied = update.apply(row);
+
+    if (applied == row) return;
+
+    _rows[update.key] = applied;
 
     if (shouldNotify) {
       notify();
@@ -456,9 +496,9 @@ final class PaginatedTableDataController extends TableDataController
   }
 
   @override
-  void updateAll(List<RowData> rows, {bool replaceAll = false}) {
+  void replaceAll(List<RowData> rows) {
     _currentPage = 0; // reset to the first page when updating rows
-    super.updateAll(rows, replaceAll: replaceAll);
+    super.replaceAll(rows);
   }
 
   @override
