@@ -174,6 +174,12 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
       persistentFooterButtons: [
         ElevatedButton(
           onPressed: () {
+            _tableController.rows.replaceAll([]);
+          },
+          child: const Text("Clear"),
+        ),
+        ElevatedButton(
+          onPressed: () {
             _loadMore(10);
           },
           child: const Text("Load More (10)"),

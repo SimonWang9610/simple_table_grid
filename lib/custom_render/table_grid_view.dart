@@ -2,6 +2,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/custom_render/delegate.dart';
 import 'package:simple_table_grid/custom_render/viewport.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 
 extension ChildVicinityGridExt on ChildVicinity {
   int get row => yIndex;
@@ -56,6 +57,31 @@ class TableGridView extends TwoDimensionalScrollView {
             pinnedRowCount: pinnedRowCount,
             rowExtentBuilder: rowExtentBuilder,
             columnExtentBuilder: columnExtentBuilder,
+          ),
+        );
+
+  TableGridView.withController({
+    super.key,
+    super.primary,
+    super.mainAxis,
+    super.horizontalDetails,
+    super.verticalDetails,
+    super.cacheExtent,
+    super.diagonalDragBehavior = DiagonalDragBehavior.none,
+    super.dragStartBehavior,
+    super.keyboardDismissBehavior,
+    super.clipBehavior,
+    required CellWidgetBuilder builder,
+    required TableController controller,
+  }) : super(
+          delegate: TableGridCellBuilderDelegate(
+            columnCount: controller.columns.count,
+            rowCount: controller.rows.count,
+            builder: builder,
+            pinnedColumnCount: controller.columns.pinnedCount,
+            pinnedRowCount: controller.rows.pinnedCount,
+            rowExtentBuilder: controller.sizer.getRowExtent,
+            columnExtentBuilder: controller.sizer.getColumnExtent,
           ),
         );
 

@@ -47,6 +47,7 @@ final class _FixedExtent extends Extent {
   Extent accept(double delta) => this;
 }
 
+// ignore: unused_element
 final class _FractionalExtent extends Extent {
   final double fraction;
 
@@ -73,6 +74,7 @@ final class _FractionalExtent extends Extent {
   Extent accept(double delta) => this;
 }
 
+// ignore: unused_element
 final class _RemainingExtent extends Extent {
   const _RemainingExtent();
 

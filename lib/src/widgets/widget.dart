@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:simple_table_grid/custom_render/delegate.dart';
 import 'package:simple_table_grid/custom_render/table_grid_view.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 import 'package:simple_table_grid/src/widgets/cell_detail_widget.dart';
@@ -54,8 +53,6 @@ class TableGrid extends StatefulWidget {
 }
 
 class _TableGridState extends State<TableGrid> {
-  late final TableGridSizedBuilderDelegate _delegate;
-
   ScrollController? _horizontalFallbackController;
   ScrollController? _verticalFallbackController;
 
@@ -68,63 +65,33 @@ class _TableGridState extends State<TableGrid> {
       (_verticalFallbackController ??= ScrollController());
 
   @override
-  void initState() {
-    super.initState();
-    _delegate = TableGridSizedBuilderDelegate(
-      columnCount: widget.controller.columnCount,
-      rowCount: widget.controller.rowCount,
-      pinnedColumnCount: widget.controller.pinnedColumnCount,
-      pinnedRowCount: widget.controller.pinnedRowCount,
-      sizer: widget.controller.sizer,
-      builder: _delegateBuilder,
-    );
-
-    widget.controller.addListener(_syncController);
-  }
-
-  @override
-  void didUpdateWidget(covariant TableGrid oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_syncController);
-      widget.controller.addListener(_syncController);
-      _syncController();
-    }
-  }
-
-  @override
   void dispose() {
-    widget.controller.removeListener(_syncController);
     _horizontalFallbackController?.dispose();
     _verticalFallbackController?.dispose();
     super.dispose();
   }
 
-  void _syncController() {
-    _delegate.update(
-      columnCount: widget.controller.columnCount,
-      rowCount: widget.controller.rowCount,
-      pinnedColumnCount: widget.controller.pinnedColumnCount,
-      pinnedRowCount: widget.controller.pinnedRowCount,
-      sizer: widget.controller.sizer,
-      alwaysNotify: true,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final grid = TableGridView(
-      delegate: _delegate,
-      mainAxis: Axis.horizontal,
-      horizontalDetails: ScrollableDetails.horizontal(
-        controller: _effectiveHorizontalScrollController,
-        physics:
-            widget.horizontalScrollPhysics ?? const ClampingScrollPhysics(),
-      ),
-      verticalDetails: ScrollableDetails.vertical(
-        controller: _effectiveVerticalScrollController,
-        physics: widget.verticalScrollPhysics ?? const ClampingScrollPhysics(),
-      ),
+    final grid = ListenableBuilder(
+      listenable: widget.controller,
+      builder: (_, __) {
+        return TableGridView.withController(
+          mainAxis: Axis.horizontal,
+          horizontalDetails: ScrollableDetails.horizontal(
+            controller: _effectiveHorizontalScrollController,
+            physics:
+                widget.horizontalScrollPhysics ?? const ClampingScrollPhysics(),
+          ),
+          verticalDetails: ScrollableDetails.vertical(
+            controller: _effectiveVerticalScrollController,
+            physics:
+                widget.verticalScrollPhysics ?? const ClampingScrollPhysics(),
+          ),
+          controller: widget.controller,
+          builder: _delegateBuilder,
+        );
+      },
     );
 
     final bar = Scrollbar(

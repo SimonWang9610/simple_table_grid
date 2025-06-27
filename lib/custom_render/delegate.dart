@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:simple_table_grid/simple_table_grid.dart';
-import 'package:simple_table_grid/src/models/extent.dart';
 
 typedef CellExtentBuilder = Extent Function(int index);
 typedef CellWidgetBuilder = Widget Function(
@@ -137,6 +136,20 @@ class TableGridSizedBuilderDelegate extends TwoDimensionalChildBuilderDelegate
           maxXIndex: columnCount - 1,
           maxYIndex: rowCount - 1,
         );
+
+  factory TableGridSizedBuilderDelegate.fromController(
+    TableController controller, {
+    required TwoDimensionalIndexedWidgetBuilder builder,
+  }) {
+    return TableGridSizedBuilderDelegate(
+      columnCount: controller.columnCount,
+      rowCount: controller.rowCount,
+      pinnedColumnCount: controller.pinnedColumnCount,
+      pinnedRowCount: controller.pinnedRowCount,
+      sizer: controller.sizer,
+      builder: builder,
+    );
+  }
 
   @override
   int get columnCount => maxXIndex! + 1;

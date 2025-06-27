@@ -11,6 +11,8 @@ class PaginatedExample extends StatefulWidget {
 }
 
 class _PaginatedExampleState extends State<PaginatedExample> {
+  final _pageSize = ValueNotifier<int>(5);
+
   final columnModels = [
     CustomDataGridModel(
         columnName: 'Menu',
@@ -79,7 +81,7 @@ class _PaginatedExampleState extends State<PaginatedExample> {
     }
 
     _tableController = TableController.paginated(
-      pageSize: 5,
+      pageSize: _pageSize.value,
       columns: columns,
       pinnedColumns: pinnedColumns,
       defaultRowExtent: Extent.range(pixels: 80, min: 60, max: 100),
@@ -175,6 +177,12 @@ class _PaginatedExampleState extends State<PaginatedExample> {
       persistentFooterButtons: [
         ElevatedButton(
           onPressed: () {
+            _tableController.rows.replaceAll([]);
+          },
+          child: const Text("Clear"),
+        ),
+        ElevatedButton(
+          onPressed: () {
             _loadMore(10);
           },
           child: const Text("Load More (10)"),
@@ -191,20 +199,26 @@ class _PaginatedExampleState extends State<PaginatedExample> {
           },
           child: Text("Next"),
         ),
-        DropdownButton<int>(
-          value: 5,
-          items: [5, 10, 15, 20]
-              .map(
-                (e) => DropdownMenuItem<int>(
-                  value: e,
-                  child: Text("$e items per page"),
-                ),
-              )
-              .toList(),
-          onChanged: (e) {
-            if (e != null) {
-              _tableController.paginator?.pageSize = e;
-            }
+        ValueListenableBuilder(
+          valueListenable: _pageSize,
+          builder: (context, value, child) {
+            return DropdownButton<int>(
+              value: value,
+              items: [5, 10, 15, 20]
+                  .map(
+                    (e) => DropdownMenuItem<int>(
+                      value: e,
+                      child: Text("$e items per page"),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (e) {
+                if (e != null) {
+                  _tableController.paginator?.pageSize = e;
+                  _pageSize.value = e;
+                }
+              },
+            );
           },
         ),
         ListenableBuilder(
