@@ -35,8 +35,8 @@ class TableColumnSelector extends StatelessWidget {
           },
         );
       },
-      icon: const Icon(Icons.table_chart),
-      label: Text("Select Columns"),
+      icon: const Icon(Icons.toggle_off),
+      label: Text("Toggle Columns"),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:example/examples/column_selector.dart';
+import 'package:example/examples/exporter_button.dart';
 import 'package:example/helper.dart';
 import 'package:example/models/custom_data_grid_model.dart';
 import 'package:flutter/material.dart';
@@ -116,24 +117,28 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Infinite Scroll Example'),
-        actions: [
-          ListenableBuilder(
-            listenable: _tableController,
-            builder: (_, __) {
-              return TableColumnSelector(
-                allColumns: columnModels,
-                selectedColumns: _tableController.columns.ordered,
-                onSubmit: _onColumnChanged,
-              );
-            },
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(
           spacing: 15,
           children: [
+            Row(
+              children: [
+                ExcelExportButton(controller: _tableController),
+                PdfExportButton(controller: _tableController),
+                ListenableBuilder(
+                  listenable: _tableController,
+                  builder: (_, __) {
+                    return TableColumnSelector(
+                      allColumns: columnModels,
+                      selectedColumns: _tableController.columns.ordered,
+                      onSubmit: _onColumnChanged,
+                    );
+                  },
+                ),
+              ],
+            ),
             TextField(
               controller: _keyword,
               decoration: InputDecoration(
@@ -282,7 +287,7 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     List<ColumnKey> willRemoved,
   ) {
     for (final col in willAdded) {
-      if (col.data is CustomDataGridModel) {
+      if (col.data is! CustomDataGridModel) {
         throw ArgumentError(
           "Column data must be of type CustomDataGridModel",
         );

@@ -33,6 +33,7 @@ dependencies:
   faker: ^2.2.0
   pdf: ^3.11.3
   excel: ^4.0.6
+  path_provider: ^2.1.5
 
   simple_table_grid:
 
