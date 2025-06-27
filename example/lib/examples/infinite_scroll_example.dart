@@ -1,3 +1,4 @@
+import 'package:example/examples/column_selector.dart';
 import 'package:example/helper.dart';
 import 'package:example/models/custom_data_grid_model.dart';
 import 'package:flutter/material.dart';
@@ -41,14 +42,22 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     ),
     CustomDataGridModel(
       columnName: 'CardAssignments',
-      isDisplayed: true,
+      isDisplayed: false,
       width: 400,
       position: 5,
     ),
     CustomDataGridModel(
-        columnName: 'BadgeType', isDisplayed: true, width: 400, position: 6),
+      columnName: 'BadgeType',
+      isDisplayed: false,
+      width: 400,
+      position: 6,
+    ),
     CustomDataGridModel(
-        columnName: 'Tags', isDisplayed: true, width: 300, position: 7),
+      columnName: 'Tags',
+      isDisplayed: false,
+      width: 300,
+      position: 7,
+    ),
   ];
 
   late final TableController _tableController;
@@ -63,6 +72,10 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
 
     for (final col in columnModels) {
       final key = col.columnKey;
+
+      if (col.isDisplayed == false) {
+        continue; // Skip columns that are not displayed
+      }
 
       columns.add(
         HeaderData(
@@ -103,6 +116,18 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Infinite Scroll Example'),
+        actions: [
+          ListenableBuilder(
+            listenable: _tableController,
+            builder: (_, __) {
+              return TableColumnSelector(
+                allColumns: columnModels,
+                selectedColumns: _tableController.columns.ordered,
+                onSubmit: _onColumnChanged,
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -226,6 +251,11 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
           return RowData(
             RowKey(e.key),
             data: {
+              /// no matter if the column is displayed or not,
+              /// we still need to provide the data for it,
+              /// in case it is displayed later
+              ///
+              /// Otherwise, [TableCellDetail.data] will be null
               for (final col in columnModels)
                 col.columnKey: jsonData[col.columnName],
             },
@@ -236,6 +266,40 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
       debugPrint("Error mocking data: $e");
       return [];
     }
+  }
+
+  /// As [CustomDataGridModel] is mutable,
+  /// so we can update its isDisplayed property.
+  /// The update will be reflected in the element of [columnModels],
+  /// as we are mutating the same instance.
+  ///
+  ///
+  /// If [HeaderData.data] is immutable,
+  /// we should store [isDisplayed] as part of [HeaderData.data],
+  /// as [TableController.columns.ordered] only shows those displaying columns.
+  void _onColumnChanged(
+    List<HeaderData> willAdded,
+    List<ColumnKey> willRemoved,
+  ) {
+    for (final col in willAdded) {
+      if (col.data is CustomDataGridModel) {
+        throw ArgumentError(
+          "Column data must be of type CustomDataGridModel",
+        );
+      }
+
+      (col.data as CustomDataGridModel).isDisplayed = true;
+    }
+
+    for (final key in willRemoved) {
+      final columnData = _tableController.columns.getHeaderData(key);
+      if (columnData is CustomDataGridModel) {
+        columnData.isDisplayed = false;
+      }
+    }
+
+    _tableController.columns.addAll(willAdded);
+    _tableController.columns.removeAll(willRemoved);
   }
 }
 

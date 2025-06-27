@@ -5,17 +5,24 @@ abstract base class TableColumnController {
   /// Adds a list of columns to the controller.
   /// If a column already exists, it will be ignored.
   /// Notifies listeners if any new columns were added.
+  ///
   void addAll(List<HeaderData> columns);
 
   /// Adds a single column to the controller.
+  ///
+  /// it is developer's responsibility to ensure that each row has the data for the newly added columns.
   void add(HeaderData column);
 
   /// Removes a list of columns from the controller.
   /// Notifies listeners if any columns were removed.
   /// If a column does not exist, it will be ignored.
+  ///
+  /// The corresponding data for the removed columns will not be removed from the row data implicitly.
   void removeAll(List<ColumnKey> columns);
 
   /// Removes a single column from the controller.
+  ///
+  /// The corresponding data for the removed columns will not be removed from the row data implicitly.
   void remove(ColumnKey column);
 
   /// Pins a column to the end of the pinned columns.
