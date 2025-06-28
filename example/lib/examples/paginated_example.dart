@@ -98,7 +98,7 @@ class _PaginatedExampleState extends State<PaginatedExample> {
       pageSize: _pageSize.value,
       columns: columns,
       pinnedColumns: pinnedColumns,
-      defaultRowExtent: Extent.range(pixels: 80, min: 60, max: 100),
+      defaultRowExtent: Extent.fixed(60),
       defaultColumnExtent: Extent.range(pixels: 200, min: 100),
       columnExtents: columnExtents,
     );
