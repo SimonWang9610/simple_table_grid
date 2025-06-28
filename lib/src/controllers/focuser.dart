@@ -204,6 +204,12 @@ final class TableFocusController extends TableFocuser
         : false;
   }
 
+  List<RowKey> get selectedRows {
+    return _selectionStrategies.canSelectRow
+        ? _selectedRows.focused.toList()
+        : [];
+  }
+
   Listenable? get cellFocusNotifier {
     final notifiers = <Listenable>[];
 

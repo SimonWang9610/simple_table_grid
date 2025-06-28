@@ -35,11 +35,3 @@ class ResizeTarget<T extends TableKey> {
     return 'ResizeTarget(key: $key, direction: $direction)';
   }
 }
-
-enum DataExportOption {
-  all,
-  current,
-  custom,
-}
-
-enum DataUpdateOption { merge, replace, add, remove }

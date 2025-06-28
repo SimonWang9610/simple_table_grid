@@ -46,7 +46,6 @@ abstract base class TableColumnController {
 
   /// Returns the current ordering of columns.
   List<ColumnKey> get ordered;
-  List<HeaderData> exportColumns(List<ColumnKey> skippedColumns);
 
   dynamic getHeaderData(ColumnKey key);
 }
@@ -98,12 +97,6 @@ final class TableHeaderController extends TableColumnController
         ..._pinnedOrdering.keys,
         ..._nonPinnedOrdering.keys,
       ];
-
-  @override
-  List<HeaderData> exportColumns(List<ColumnKey> skippedColumns) {
-    final orderedKeys = ordered.where((key) => !skippedColumns.contains(key));
-    return orderedKeys.map((key) => _columns[key]!).toList();
-  }
 
   @override
   int get count => _pinnedOrdering.length + _nonPinnedOrdering.length;
@@ -280,5 +273,9 @@ final class TableHeaderController extends TableColumnController
   @override
   dynamic getHeaderData(ColumnKey key) {
     return _columns[key]?.data;
+  }
+
+  HeaderData? getHeader(ColumnKey key) {
+    return _columns[key];
   }
 }

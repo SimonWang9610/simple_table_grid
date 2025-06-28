@@ -24,6 +24,15 @@ abstract base class TableController with ChangeNotifier {
   int get rowCount => rows.count;
   int get pinnedRowCount => rows.pinnedCount;
 
+  Future<void> saveDataToFile(
+    ExporterConfig config, {
+    required HeaderDataConverter headerConverter,
+    required CellDataConverter cellConverter,
+    ExporterOption option = ExporterOption.all,
+    List<ColumnKey> ignoredColumns = const [],
+    List<RowData>? appendedRows,
+  });
+
   void _notify() {
     notifyListeners();
   }
@@ -197,7 +206,7 @@ final class _ControllerImpl extends TableController
   TableColumnController get columns => header;
 
   @override
-  TableFocusController get focuser => focus;
+  TableFocuser get focuser => focus;
 
   @override
   TableSizer get sizer => extent;
@@ -299,6 +308,53 @@ final class _ControllerImpl extends TableController
   bool isRowPinned(int vicinityRow) {
     return vicinityRow < data.pinnedCount;
   }
+
+  @override
+  Future<void> saveDataToFile(
+    ExporterConfig config, {
+    required HeaderDataConverter headerConverter,
+    required CellDataConverter cellConverter,
+    ExporterOption option = ExporterOption.all,
+    List<ColumnKey> ignoredColumns = const [],
+    List<RowData>? appendedRows,
+  }) async {
+    final headers = <HeaderData>[];
+    final dataRows = <RowData>[];
+
+    for (final col in columns.ordered) {
+      if (ignoredColumns.contains(col)) continue;
+
+      final headerData = header.getHeader(col);
+
+      if (headerData != null) {
+        headers.add(headerData);
+      }
+    }
+
+    final targetRows = switch (option) {
+      ExporterOption.all => data.allRowKeys,
+      ExporterOption.current => data.currentRowKeys,
+      ExporterOption.selected => focus.selectedRows,
+    };
+
+    for (final rowKey in targetRows) {
+      final rowData = data.getRow(rowKey);
+      if (rowData != null) {
+        dataRows.add(rowData);
+      }
+    }
+
+    if (appendedRows != null) {
+      dataRows.addAll(appendedRows);
+    }
+
+    await config.save(
+      headerConverter: headerConverter,
+      cellConverter: cellConverter,
+      headers: headers,
+      rows: dataRows,
+    );
+  }
 }
 
 final class _PaginatedControllerImpl extends TableController
@@ -356,7 +412,7 @@ final class _PaginatedControllerImpl extends TableController
   TableColumnController get columns => header;
 
   @override
-  TableFocusController get focuser => focus;
+  TableFocuser get focuser => focus;
 
   @override
   TableSizer get sizer => extent;
@@ -456,5 +512,52 @@ final class _PaginatedControllerImpl extends TableController
 
   bool isColumnPinned(int vicinityColumn) {
     return vicinityColumn < header.pinnedCount;
+  }
+
+  @override
+  Future<void> saveDataToFile(
+    ExporterConfig config, {
+    required HeaderDataConverter headerConverter,
+    required CellDataConverter cellConverter,
+    ExporterOption option = ExporterOption.all,
+    List<ColumnKey> ignoredColumns = const [],
+    List<RowData>? appendedRows,
+  }) async {
+    final headers = <HeaderData>[];
+    final dataRows = <RowData>[];
+
+    for (final col in columns.ordered) {
+      if (ignoredColumns.contains(col)) continue;
+
+      final headerData = header.getHeader(col);
+
+      if (headerData != null) {
+        headers.add(headerData);
+      }
+    }
+
+    final targetRows = switch (option) {
+      ExporterOption.all => data.allRowKeys,
+      ExporterOption.current => data.currentPageKeys,
+      ExporterOption.selected => focus.selectedRows,
+    };
+
+    for (final rowKey in targetRows) {
+      final rowData = data.getRow(rowKey);
+      if (rowData != null) {
+        dataRows.add(rowData);
+      }
+    }
+
+    if (appendedRows != null) {
+      dataRows.addAll(appendedRows);
+    }
+
+    await config.save(
+      headerConverter: headerConverter,
+      cellConverter: cellConverter,
+      headers: headers,
+      rows: dataRows,
+    );
   }
 }

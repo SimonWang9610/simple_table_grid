@@ -150,4 +150,8 @@ class DataSearchBucket {
   SearchSnapshot get current {
     return _searchSnapshot ?? _alwaysSnapshot;
   }
+
+  SearchSnapshot get always {
+    return _alwaysSnapshot;
+  }
 }

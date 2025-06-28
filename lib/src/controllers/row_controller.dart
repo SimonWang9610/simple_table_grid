@@ -107,11 +107,6 @@ abstract base class TableRowController {
   /// The count of data rows excluding the header row.
   int get dataCount;
 
-  List<RowData> exportRows(
-    DataExportOption option, {
-    List<RowKey> customSelected = const [],
-  });
-
   /// Manually notify the controller that the data has changed.
   ///
   /// Typically it happens when some [RowData] are changed outside of the controller context,
@@ -345,22 +340,6 @@ final class TableDataController extends TableRowController
   }
 
   @override
-  List<RowData> exportRows(
-    DataExportOption option, {
-    List<RowKey> customSelected = const [],
-  }) {
-    return switch (option) {
-      DataExportOption.all => orderedRows,
-      DataExportOption.current =>
-        _searcher.current.ordered.map((key) => _rows[key]!).toList(),
-      DataExportOption.custom => customSelected
-          .where((key) => _rows.containsKey(key))
-          .map((key) => _rows[key]!)
-          .toList(),
-    };
-  }
-
-  @override
   void dispose() {
     super.dispose();
     _rows.clear();
@@ -422,6 +401,18 @@ final class TableDataController extends TableRowController
 
     return rowData![columnKey];
   }
+
+  List<RowKey> get allRowKeys {
+    return _searcher.always.ordered;
+  }
+
+  List<RowKey> get currentRowKeys {
+    return _searcher.current.ordered;
+  }
+
+  RowData? getRow(RowKey rowKey) {
+    return _rows[rowKey];
+  }
 }
 
 abstract interface class Paginator {
@@ -441,6 +432,13 @@ final class PaginatedTableDataController extends TableDataController
   PaginatedTableDataController({super.rows, required int pageSize})
       : _pageSize = pageSize,
         super(alwaysShowHeader: true);
+
+  List<RowKey> get currentPageKeys {
+    return _searcher.current.ordered
+        .skip(_currentPage * _pageSize)
+        .take(count - 1)
+        .toList();
+  }
 
   @override
   void pin(RowKey row) {}

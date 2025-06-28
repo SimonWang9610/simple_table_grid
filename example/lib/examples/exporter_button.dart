@@ -1,6 +1,6 @@
-import 'package:example/exporter.dart';
 import 'package:example/models/custom_data_grid_model.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 
 class ExcelExportButton extends StatelessWidget {
@@ -14,11 +14,15 @@ class ExcelExportButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton.icon(
       onPressed: () async {
-        final exporter = ExcelExporter(controller);
+        final config = ExcelExporterConfig(
+          filename: "exported_example",
+          sheetName: "Example Data",
+        );
 
-        await exporter.exportToExcel(
-          "exported_example",
-          skippedColumns: [ColumnKey("Menu")],
+        await controller.saveDataToFile(
+          config,
+          option: ExporterOption.all,
+          ignoredColumns: [ColumnKey("Menu")],
           headerConverter: (headerData) {
             final data = (headerData.data as CustomDataGridModel);
             return data.displayName ?? data.columnName;
@@ -47,11 +51,18 @@ class PdfExportButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton.icon(
       onPressed: () async {
-        final exporter = PdfExporter(controller);
+        final logo = await rootBundle.load('assets/acre-logo-dark.png');
 
-        await exporter.exportToPdf(
-          "exported_example",
-          skippedColumns: [ColumnKey("Menu")],
+        final config = PdfExporterConfig(
+          filename: "exported_example",
+          title: "Exported Example",
+          logo: logo.buffer.asUint8List(),
+        );
+
+        await controller.saveDataToFile(
+          config,
+          option: ExporterOption.current,
+          ignoredColumns: [ColumnKey("Menu")],
           headerConverter: (headerData) {
             final data = (headerData.data as CustomDataGridModel);
             return data.displayName ?? data.columnName;
