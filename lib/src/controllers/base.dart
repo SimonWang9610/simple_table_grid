@@ -24,6 +24,24 @@ abstract base class TableController with ChangeNotifier {
   int get rowCount => rows.count;
   int get pinnedRowCount => rows.pinnedCount;
 
+  /// Save the table data to a file.
+  ///
+  /// [config] is the configuration for the exporter.
+  /// - [ExcelExporterConfig] for Excel files.
+  /// - [PdfExporterConfig] for PDF files.
+  ///
+  /// [headerConverter] is used to convert the header data to a string.
+  /// [cellConverter] is used to convert the cell data to a string.
+  ///
+  /// [option] determines which rows to export:
+  /// - [ExporterOption.all]: All rows in the table.
+  /// - [ExporterOption.current]: Only the rows currently displayed in the table.
+  /// - [ExporterOption.selected]: Only the rows that are currently selected.
+  ///
+  /// [ignoredColumns] is a list of columns to ignore when exporting the data.
+  ///
+  /// [appendedRows] is a list of rows to append to the exported data.
+  /// This is useful for adding additional rows that are not part of the table data.
   Future<void> saveDataToFile(
     ExporterConfig config, {
     required HeaderDataConverter headerConverter,
@@ -331,13 +349,13 @@ final class _ControllerImpl extends TableController
       }
     }
 
-    final targetRows = switch (option) {
+    final targets = switch (option) {
       ExporterOption.all => data.allRowKeys,
       ExporterOption.current => data.currentRowKeys,
       ExporterOption.selected => focus.selectedRows,
     };
 
-    for (final rowKey in targetRows) {
+    for (final rowKey in targets) {
       final rowData = data.getRow(rowKey);
       if (rowData != null) {
         dataRows.add(rowData);
@@ -536,13 +554,13 @@ final class _PaginatedControllerImpl extends TableController
       }
     }
 
-    final targetRows = switch (option) {
+    final targets = switch (option) {
       ExporterOption.all => data.allRowKeys,
       ExporterOption.current => data.currentPageKeys,
       ExporterOption.selected => focus.selectedRows,
     };
 
-    for (final rowKey in targetRows) {
+    for (final rowKey in targets) {
       final rowData = data.getRow(rowKey);
       if (rowData != null) {
         dataRows.add(rowData);
