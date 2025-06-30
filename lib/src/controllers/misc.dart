@@ -81,9 +81,11 @@ base mixin TableCursorDelegate on TableSizer {
     }
   }
 
+  @override
   void dispose() {
     _cursor = SystemMouseCursors.basic;
     _resizeDirection = null;
     _dragging = false;
+    super.dispose();
   }
 }

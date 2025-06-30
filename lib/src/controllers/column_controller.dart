@@ -1,7 +1,8 @@
+import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/key_ordering.dart';
 
-abstract base class TableColumnController {
+abstract base class TableColumnController with ChangeNotifier {
   /// Adds a list of columns to the controller.
   /// If a column already exists, it will be ignored.
   /// Notifies listeners if any new columns were added.
@@ -45,7 +46,7 @@ abstract base class TableColumnController {
   int get pinnedCount;
 
   /// Returns the current ordering of columns.
-  List<ColumnKey> get ordered;
+  List<HeaderData> get ordered;
 
   dynamic getHeaderData(ColumnKey key);
 }
@@ -93,10 +94,19 @@ final class TableHeaderController extends TableColumnController
   late final KeyOrdering<ColumnKey> _nonPinnedOrdering;
 
   @override
-  List<ColumnKey> get ordered => [
-        ..._pinnedOrdering.keys,
-        ..._nonPinnedOrdering.keys,
-      ];
+  List<HeaderData> get ordered {
+    final orderedColumns = <HeaderData>[];
+
+    for (final key in _pinnedOrdering.keys) {
+      orderedColumns.add(_columns[key]!);
+    }
+
+    for (final key in _nonPinnedOrdering.keys) {
+      orderedColumns.add(_columns[key]!);
+    }
+
+    return orderedColumns;
+  }
 
   @override
   int get count => _pinnedOrdering.length + _nonPinnedOrdering.length;

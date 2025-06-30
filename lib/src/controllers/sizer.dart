@@ -1,8 +1,9 @@
+import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart' hide TableIndexFinder;
 import 'package:simple_table_grid/src/controllers/base.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 
-abstract base class TableSizer {
+abstract base class TableSizer with ChangeNotifier {
   /// set the extent at the given [index] for the row.
   void setRowExtent(int index, Extent extent);
 

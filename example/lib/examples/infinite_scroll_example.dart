@@ -128,11 +128,15 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
                 ExcelExportButton(controller: _tableController),
                 PdfExportButton(controller: _tableController),
                 ListenableBuilder(
-                  listenable: _tableController,
+                  listenable: _tableController.columns,
                   builder: (_, __) {
                     return TableColumnSelector(
                       allColumns: columnModels,
-                      selectedColumns: _tableController.columns.ordered,
+                      selectedColumns: _tableController.columns.ordered
+                          .map(
+                            (e) => e.key,
+                          )
+                          .toList(),
                       onSubmit: _onColumnChanged,
                     );
                   },

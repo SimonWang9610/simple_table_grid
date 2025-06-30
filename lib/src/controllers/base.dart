@@ -138,7 +138,7 @@ abstract interface class TableInternalController {
   T getCellDetail<T extends CellDetail>(ChildVicinity vicinity);
 }
 
-abstract mixin class TableControllerCoordinator {
+mixin TableControllerCoordinator on ChangeNotifier {
   TableController? _controller;
 
   void bind(TableController controller) {
@@ -147,12 +147,13 @@ abstract mixin class TableControllerCoordinator {
 
   void notify() {
     _controller?._notify();
+    notifyListeners();
   }
 
-  @mustCallSuper
-  @protected
+  @override
   void dispose() {
     _controller = null;
+    super.dispose();
   }
 }
 
@@ -205,7 +206,7 @@ final class _ControllerImpl extends TableController
     focus = TableFocusController(
       selectionStrategies: selectionStrategies,
       hoveringStrategies: hoveringStrategies,
-    )..bind(this);
+    );
   }
 
   @override
@@ -336,18 +337,8 @@ final class _ControllerImpl extends TableController
     List<ColumnKey> ignoredColumns = const [],
     List<RowData>? appendedRows,
   }) async {
-    final headers = <HeaderData>[];
+    final headers = columns.ordered;
     final dataRows = <RowData>[];
-
-    for (final col in columns.ordered) {
-      if (ignoredColumns.contains(col)) continue;
-
-      final headerData = header.getHeader(col);
-
-      if (headerData != null) {
-        headers.add(headerData);
-      }
-    }
 
     final targets = switch (option) {
       ExporterOption.all => data.allRowKeys,
@@ -411,7 +402,7 @@ final class _PaginatedControllerImpl extends TableController
     focus = TableFocusController(
       selectionStrategies: selectionStrategies,
       hoveringStrategies: hoveringStrategies,
-    )..bind(this);
+    );
   }
 
   @override
@@ -541,18 +532,9 @@ final class _PaginatedControllerImpl extends TableController
     List<ColumnKey> ignoredColumns = const [],
     List<RowData>? appendedRows,
   }) async {
-    final headers = <HeaderData>[];
+    final headers = columns.ordered;
+
     final dataRows = <RowData>[];
-
-    for (final col in columns.ordered) {
-      if (ignoredColumns.contains(col)) continue;
-
-      final headerData = header.getHeader(col);
-
-      if (headerData != null) {
-        headers.add(headerData);
-      }
-    }
 
     final targets = switch (option) {
       ExporterOption.all => data.allRowKeys,

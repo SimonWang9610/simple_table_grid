@@ -33,8 +33,7 @@ abstract base class TableFocuser {
   void hoverOff({RowKey? row, ColumnKey? column});
 }
 
-final class TableFocusController extends TableFocuser
-    with TableControllerCoordinator {
+final class TableFocusController extends TableFocuser {
   final _selectedRows = KeyFocuser<RowKey>();
   final _selectedColumns = KeyFocuser<ColumnKey>();
   final _selectedCells = KeyFocuser<CellKey>();
@@ -250,14 +249,12 @@ final class TableFocusController extends TableFocuser
     return notifiers.isNotEmpty ? Listenable.merge(notifiers) : null;
   }
 
-  @override
   void dispose() {
     _selectedRows.dispose();
     _selectedColumns.dispose();
     _selectedCells.dispose();
     _hoveringRows.dispose();
     _hoveringColumns.dispose();
-    super.dispose();
   }
 }
 

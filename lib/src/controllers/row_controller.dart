@@ -1,9 +1,10 @@
+import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/search_bucket.dart';
 
 typedef RowDataComparator = int Function(RowData a, RowData b);
 
-abstract base class TableRowController {
+abstract base class TableRowController with ChangeNotifier {
   /// Add all rows.
   /// Only new rows will be added, existing rows will be skipped
   void addAll(List<RowData> rows);
