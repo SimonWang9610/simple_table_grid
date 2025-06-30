@@ -12,14 +12,14 @@ sealed class Extent {
     double? max,
     required double pixels,
   }) = _RangeExtent;
-  // const factory Extent.fractional(double fraction) = _FractionalExtent;
-  // const factory Extent.remaining() = _RemainingExtent;
 
   double calculate(
     double viewportExtent, {
     required double remainingSpace,
     bool pinned = false,
   });
+
+  double get currentPixels;
 
   Extent accept(double delta);
 }
@@ -28,6 +28,9 @@ final class _FixedExtent extends Extent {
   final double pixels;
 
   const _FixedExtent(this.pixels);
+
+  @override
+  double get currentPixels => pixels;
 
   @override
   double calculate(
@@ -41,50 +44,6 @@ final class _FixedExtent extends Extent {
 
     final allowed = math.min(pixels, remainingSpace);
     return allowed >= 0 ? allowed : 0;
-  }
-
-  @override
-  Extent accept(double delta) => this;
-}
-
-// ignore: unused_element
-final class _FractionalExtent extends Extent {
-  final double fraction;
-
-  const _FractionalExtent(this.fraction);
-
-  @override
-  double calculate(
-    double viewportExtent, {
-    required double remainingSpace,
-    bool pinned = false,
-  }) {
-    final double pixels = fraction * viewportExtent;
-
-    if (!pinned) {
-      return pixels;
-    }
-
-    final double allowed = math.min(pixels, remainingSpace);
-
-    return allowed >= 0 ? allowed : 0;
-  }
-
-  @override
-  Extent accept(double delta) => this;
-}
-
-// ignore: unused_element
-final class _RemainingExtent extends Extent {
-  const _RemainingExtent();
-
-  @override
-  double calculate(
-    double viewportExtent, {
-    required double remainingSpace,
-    bool pinned = false,
-  }) {
-    return remainingSpace > 0 ? remainingSpace : 0;
   }
 
   @override
@@ -105,6 +64,9 @@ final class _RangeExtent extends Extent {
         assert(pixels >= 0),
         assert((pixels >= (min ?? 0)) && (pixels <= (max ?? double.infinity)),
             'pixels must be within the range defined by min and max');
+
+  @override
+  double get currentPixels => pixels;
 
   @override
   double calculate(
