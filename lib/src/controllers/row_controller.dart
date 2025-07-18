@@ -1,10 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
+import 'package:simple_table_grid/src/components/reorder_interfaces.dart';
 import 'package:simple_table_grid/src/components/search_bucket.dart';
 
 typedef RowDataComparator = int Function(RowData a, RowData b);
 
-abstract base class TableRowController with ChangeNotifier {
+abstract base class TableRowController
+    with ChangeNotifier, TableKeyReorderMixin<RowKey> {
   /// Add all rows.
   /// Only new rows will be added, existing rows will be skipped
   void addAll(List<RowData> rows);
@@ -61,13 +63,6 @@ abstract base class TableRowController with ChangeNotifier {
 
   /// Unpin a row with the given key.
   void unpin(RowKey row);
-
-  /// Reorder a row from one key to another.
-  ///
-  /// If the index of [from] is less than the index of [to], [from] will come after [to].
-  /// If the index of [from] is greater than the index of [to], [from] will come before [to].
-  /// If [from] and [to] are the same, nothing will happen.
-  void reorder(RowKey from, RowKey to);
 
   /// If always pinning the header row.
   ///
@@ -243,8 +238,13 @@ final class TableDataController extends TableRowController
     notify();
   }
 
+  ReorderPredicate<RowKey>? _reorderPredicate;
+
   @override
-  void reorder(RowKey from, RowKey to) {
+  ReorderPredicate<RowKey>? get reorderPredicate => _reorderPredicate;
+
+  @override
+  void reordering(RowKey from, RowKey? to) {
     assert(
       _rows.containsKey(from),
       "From key $from is not in the data source",
@@ -254,9 +254,28 @@ final class TableDataController extends TableRowController
       "To key $to is not in the data source",
     );
 
-    _searcher.current.reorder(from, to);
+    if (to == null) {
+      if (_reorderPredicate == null) return;
+      _reorderPredicate = null; // reset the predicate if no target
+      notify();
+      return;
+    }
 
-    notify();
+    final predicate = _searcher.current.predicate(from, to);
+
+    if (_reorderPredicate != predicate) {
+      _reorderPredicate = predicate;
+      notify();
+    }
+  }
+
+  @override
+  void confirmReordering(bool apply) {
+    if (apply && _reorderPredicate != null) {
+      _searcher.current.applyReorder(_reorderPredicate!);
+      _reorderPredicate = null; // reset the predicate after applying
+      notify();
+    }
   }
 
   @override
@@ -449,9 +468,6 @@ final class PaginatedTableDataController extends TableDataController
 
   @override
   void setHeaderVisibility(bool alwaysShowHeader) {}
-
-  @override
-  void reorder(RowKey from, RowKey to) {}
 
   int _currentPage = 0;
 

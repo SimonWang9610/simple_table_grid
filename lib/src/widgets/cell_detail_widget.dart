@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
+import 'package:simple_table_grid/src/components/reorder_interfaces.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 import 'package:simple_table_grid/src/widgets/auto_cursor_region.dart';
 
-typedef DragCellCallback<T extends CellDetail> = void Function(
-  T from,
-  T to,
-);
-
-class DraggableCellWidget<T extends CellDetail> extends StatelessWidget {
-  final T detail;
+class DraggableCellWidget<T extends TableKey> extends StatelessWidget {
+  final T tableKey;
   final Widget child;
   final Widget? feedback;
-  final DragCellCallback<T> onAccept;
+  final TableKeyReorderMixin<T> reorderMixin;
   final VoidCallback? onDragStarted;
   final VoidCallback? onDragEnd;
   const DraggableCellWidget({
     super.key,
-    required this.detail,
-    required this.onAccept,
+    required this.tableKey,
+    required this.reorderMixin,
     this.onDragStarted,
     this.onDragEnd,
     required this.child,
@@ -28,12 +24,23 @@ class DraggableCellWidget<T extends CellDetail> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final target = DragTarget<T>(
-      onAcceptWithDetails: (from) => onAccept(from.data, detail),
+      onAcceptWithDetails: (from) {
+        reorderMixin.confirmReordering(true);
+      },
+      onMove: (from) {
+        reorderMixin.reordering(
+          from.data,
+          tableKey,
+        );
+      },
+      onLeave: (data) {
+        reorderMixin.confirmReordering(false);
+      },
       builder: (ctx, _, __) => child,
     );
 
     final draggable = Draggable<T>(
-      data: detail,
+      data: tableKey,
       onDragStarted: onDragStarted,
       onDragEnd: onDragEnd != null ? (_) => onDragEnd?.call() : null,
       feedback: feedback ??
@@ -51,11 +58,12 @@ class DraggableCellWidget<T extends CellDetail> extends StatelessWidget {
 
 const _defaultSize = Size(100, 50);
 
-class CellDetailWidget<T extends CellDetail> extends StatefulWidget {
+class CellDetailWidget<T extends CellDetail, K extends TableKey>
+    extends StatefulWidget {
   final T detail;
   final TableCursorDelegate cursorDelegate;
   final TableCellDetailBuilder<T> builder;
-  final DragCellCallback<T>? onReorder;
+  final TableKeyReorderMixin<K>? reorderMixin;
   final bool dragEnabled;
   final bool resizeEnabled;
   final bool isRightEdge;
@@ -70,17 +78,17 @@ class CellDetailWidget<T extends CellDetail> extends StatefulWidget {
     required this.cursorDelegate,
     required this.detail,
     required this.builder,
-    this.onReorder,
+    this.reorderMixin,
   });
 
   @override
-  State<CellDetailWidget<T>> createState() => _CellDetailWidgetState<T>();
+  State<CellDetailWidget<T, K>> createState() => _CellDetailWidgetState<T, K>();
 }
 
-class _CellDetailWidgetState<T extends CellDetail>
-    extends State<CellDetailWidget<T>> {
+class _CellDetailWidgetState<T extends CellDetail, K extends TableKey>
+    extends State<CellDetailWidget<T, K>> {
   late final ValueNotifier<bool> _canDrag =
-      ValueNotifier<bool>(widget.dragEnabled && widget.onReorder != null);
+      ValueNotifier<bool>(widget.dragEnabled && widget.reorderMixin != null);
 
   final _size = ValueNotifier<Size?>(null);
 
@@ -97,14 +105,20 @@ class _CellDetailWidgetState<T extends CellDetail>
 
     final gridTheme = TableGridTheme.of(context);
 
-    final padding = gridTheme.border?.calculatePadding(
+    final isReorderTarget =
+        widget.reorderMixin?.reorderPredicate?.isReorderTarget(widget.detail) ??
+            false;
+
+    final padding = gridTheme.calculatePadding(
       widget.isRightEdge,
       widget.isBottomEdge,
+      isReorderTarget,
     );
 
-    final border = gridTheme.border?.calculateBorder(
+    final border = gridTheme.calculateBorder(
       widget.isRightEdge,
       widget.isBottomEdge,
+      isReorderTarget,
     );
 
     final cellTheme = switch (widget.detail) {
@@ -114,7 +128,11 @@ class _CellDetailWidgetState<T extends CellDetail>
 
     Widget child = widget.builder(context, widget.detail);
 
-    if (widget.dragEnabled && widget.onReorder != null) {
+    final tableKey = widget.detail is TableHeaderDetail
+        ? (widget.detail as TableHeaderDetail).columnKey
+        : (widget.detail as TableCellDetail).rowKey;
+
+    if (widget.dragEnabled && widget.reorderMixin != null) {
       child = ValueListenableBuilder(
         valueListenable: _canDrag,
         builder: (_, canDrag, child) {
@@ -123,10 +141,10 @@ class _CellDetailWidgetState<T extends CellDetail>
             child: child,
           );
         },
-        child: DraggableCellWidget<T>(
-          detail: widget.detail,
+        child: DraggableCellWidget(
+          tableKey: tableKey,
+          reorderMixin: widget.reorderMixin!,
           feedback: _buildFeedback(child, cellTheme),
-          onAccept: widget.onReorder!,
           onDragStarted: () => widget.cursorDelegate.setDragging(true),
           onDragEnd: () => widget.cursorDelegate.setDragging(false),
           child: child,
@@ -144,11 +162,13 @@ class _CellDetailWidgetState<T extends CellDetail>
     child = DecoratedBox(
       decoration: BoxDecoration(
         border: border,
-        color: widget.detail.selected
-            ? cellTheme.selectedColor
-            : widget.detail.hovering
-                ? cellTheme.hoveringColor
-                : cellTheme.unselectedColor,
+        color: isReorderTarget
+            ? cellTheme.reorderTargetColor
+            : widget.detail.selected
+                ? cellTheme.selectedColor
+                : widget.detail.hovering
+                    ? cellTheme.hoveringColor
+                    : cellTheme.unselectedColor,
       ),
       child: child,
     );

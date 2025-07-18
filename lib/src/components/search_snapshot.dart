@@ -61,7 +61,53 @@ class SearchSnapshot {
     }
   }
 
-  void reorder(RowKey from, RowKey to) {
+  // void reorder(RowKey from, RowKey to) {
+  //   final fromPinned = _pinnedOrdering.contains(from);
+
+  //   assert(
+  //     fromPinned || _nonPinnedOrdering.contains(from),
+  //     "From key $from is not in the pinned or non-pinned ordering",
+  //   );
+
+  //   final toPinned = _pinnedOrdering.contains(to);
+
+  //   assert(
+  //     toPinned || _nonPinnedOrdering.contains(to),
+  //     "To key $to is not in the pinned or non-pinned ordering",
+  //   );
+
+  //   if (fromPinned && toPinned) {
+  //     _pinnedOrdering.reorder(from, to);
+  //   } else if (!fromPinned && !toPinned) {
+  //     _nonPinnedOrdering.reorder(from, to);
+  //   } else if (fromPinned && !toPinned) {
+  //     _pinnedOrdering.remove(from);
+  //     _nonPinnedOrdering.insert(0, from);
+  //     _nonPinnedOrdering.reorder(from, to);
+  //   } else if (!fromPinned && toPinned) {
+  //     _nonPinnedOrdering.remove(from);
+  //     _pinnedOrdering.add(from);
+  //     _pinnedOrdering.reorder(from, to);
+  //   }
+  // }
+
+  void applyReorder(ReorderPredicate<RowKey> predicate) {
+    if (predicate.fromPinned && predicate.toPinned) {
+      _pinnedOrdering.reorder(predicate.from, predicate.to);
+    } else if (!predicate.fromPinned && !predicate.toPinned) {
+      _nonPinnedOrdering.reorder(predicate.from, predicate.to);
+    } else if (predicate.fromPinned && !predicate.toPinned) {
+      _pinnedOrdering.remove(predicate.from);
+      _nonPinnedOrdering.insert(0, predicate.from);
+      _nonPinnedOrdering.reorder(predicate.from, predicate.to);
+    } else if (!predicate.fromPinned && predicate.toPinned) {
+      _nonPinnedOrdering.remove(predicate.from);
+      _pinnedOrdering.add(predicate.from);
+      _pinnedOrdering.reorder(predicate.from, predicate.to);
+    }
+  }
+
+  ReorderPredicate<RowKey>? predicate(RowKey from, RowKey to) {
     final fromPinned = _pinnedOrdering.contains(from);
 
     assert(
@@ -77,18 +123,40 @@ class SearchSnapshot {
     );
 
     if (fromPinned && toPinned) {
-      _pinnedOrdering.reorder(from, to);
+      return ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: _pinnedOrdering.isAfter(from, to),
+      );
     } else if (!fromPinned && !toPinned) {
-      _nonPinnedOrdering.reorder(from, to);
+      return ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: _nonPinnedOrdering.isAfter(from, to),
+      );
     } else if (fromPinned && !toPinned) {
-      _pinnedOrdering.remove(from);
-      _nonPinnedOrdering.insert(0, from);
-      _nonPinnedOrdering.reorder(from, to);
+      return ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: false,
+      );
     } else if (!fromPinned && toPinned) {
-      _nonPinnedOrdering.remove(from);
-      _pinnedOrdering.add(from);
-      _pinnedOrdering.reorder(from, to);
+      return ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: false,
+      );
     }
+
+    return null; // Should not reach here
   }
 
   RowKey? previous(RowKey key) {

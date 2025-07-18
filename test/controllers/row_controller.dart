@@ -179,7 +179,8 @@ void main() {
 
       expect(controller.pinnedCount, equals(3));
 
-      controller.reorder(RowKey('Row0'), RowKey('Row1'));
+      controller.reordering(RowKey('Row0'), RowKey('Row1'));
+      controller.confirmReordering(true);
 
       expect(controller.pinnedCount, equals(3));
       expect(controller.orderedRows.first.key, equals(RowKey('Row1')));
@@ -188,7 +189,8 @@ void main() {
     test("reorder non-pinned rows", () {
       final controller = TableDataController(rows: rows);
 
-      controller.reorder(RowKey('Row0'), RowKey('Row1'));
+      controller.reordering(RowKey('Row0'), RowKey('Row1'));
+      controller.confirmReordering(true);
 
       expect(controller.orderedRows.first.key, equals(RowKey('Row1')));
     });

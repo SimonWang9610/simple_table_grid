@@ -1,4 +1,4 @@
-import 'package:simple_table_grid/src/models/key.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 
 abstract class KeyOrdering<T extends TableKey> {
   void add(T key);
@@ -6,6 +6,8 @@ abstract class KeyOrdering<T extends TableKey> {
   void remove(T key);
   void reorder(T from, T to);
   void reset();
+
+  bool isAfter(T from, T to);
   bool contains(T key);
 
   int? indexOf(T key);
@@ -180,9 +182,20 @@ class QuickOrdering<T extends TableKey> extends KeyOrdering<T> {
 
     _keyOrdering[from] = toIndex;
     _indexOrdering[toIndex] = from;
+  }
 
-    // print(_indexOrdering);
-    // print(_keyOrdering);
+  @override
+  bool isAfter(T from, T to) {
+    if (from == to ||
+        !_keyOrdering.containsKey(from) ||
+        !_keyOrdering.containsKey(to)) {
+      return false;
+    }
+
+    final fromIndex = _keyOrdering[from]!;
+    final toIndex = _keyOrdering[to]!;
+
+    return fromIndex >= toIndex;
   }
 
   @override
@@ -309,6 +322,18 @@ class EfficientOrdering<T extends TableKey> extends KeyOrdering<T> {
     _keys.removeAt(fromIndex);
 
     _keys.insert(toIndex, from);
+  }
+
+  @override
+  bool isAfter(T from, T to) {
+    if (from == to || !_keys.contains(from) || !_keys.contains(to)) {
+      return false;
+    }
+
+    final fromIndex = _keys.indexOf(from);
+    final toIndex = _keys.indexOf(to);
+
+    return fromIndex >= toIndex;
   }
 
   @override

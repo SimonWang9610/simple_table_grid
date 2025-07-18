@@ -127,7 +127,11 @@ void main() async {
     test("Reorder pinned keys", () {
       final snapshot = SearchSnapshot(pinnedKeys, nonPinnedKeys);
 
-      snapshot.reorder(RowKey("Pinned1"), RowKey("Pinned2"));
+      final predicate =
+          snapshot.predicate(RowKey("Pinned1"), RowKey("Pinned2"));
+
+      snapshot.applyReorder(predicate!);
+
       expect(snapshot.pinnedKeys[0], equals(RowKey("Pinned2")));
       expect(snapshot.pinnedKeys[1], equals(RowKey("Pinned1")));
     });
@@ -135,15 +139,22 @@ void main() async {
     test("Reorder non-pinned keys", () {
       final snapshot = SearchSnapshot(pinnedKeys, nonPinnedKeys);
 
-      snapshot.reorder(RowKey("NonPinned1"), RowKey("NonPinned2"));
+      final predicate =
+          snapshot.predicate(RowKey("NonPinned1"), RowKey("NonPinned2"));
+
+      snapshot.applyReorder(predicate!);
+
       expect(snapshot.nonPinnedKeys[0], equals(RowKey("NonPinned2")));
       expect(snapshot.nonPinnedKeys[1], equals(RowKey("NonPinned1")));
     });
 
     test("Reorder pinned to non-pinned", () {
       final snapshot = SearchSnapshot(pinnedKeys, nonPinnedKeys);
+      final predicate =
+          snapshot.predicate(RowKey("Pinned1"), RowKey("NonPinned1"));
 
-      snapshot.reorder(RowKey("Pinned1"), RowKey("NonPinned1"));
+      snapshot.applyReorder(predicate!);
+
       expect(snapshot.nonPinnedKeys.contains(RowKey("Pinned1")), isTrue);
       expect(snapshot.pinnedKeys.contains(RowKey("Pinned1")), isFalse);
       expect(snapshot.next(RowKey("NonPinned1")), equals(RowKey("Pinned1")));
@@ -152,7 +163,11 @@ void main() async {
     test("Reorder non-pinned to pinned", () {
       final snapshot = SearchSnapshot(pinnedKeys, nonPinnedKeys);
 
-      snapshot.reorder(RowKey("NonPinned3"), RowKey("Pinned2"));
+      final predicate =
+          snapshot.predicate(RowKey("NonPinned3"), RowKey("Pinned2"));
+
+      snapshot.applyReorder(predicate!);
+
       expect(snapshot.nonPinnedKeys.contains(RowKey("NonPinned3")), isFalse);
       expect(snapshot.pinnedKeys.contains(RowKey("NonPinned3")), isTrue);
       expect(

@@ -35,3 +35,52 @@ class ResizeTarget<T extends TableKey> {
     return 'ResizeTarget(key: $key, direction: $direction)';
   }
 }
+
+class ReorderPredicate<T extends TableKey> {
+  final T from;
+  final T to;
+  final bool fromPinned;
+  final bool toPinned;
+  final bool afterTo;
+
+  const ReorderPredicate({
+    required this.from,
+    required this.to,
+    required this.fromPinned,
+    required this.toPinned,
+    required this.afterTo,
+  });
+
+  bool isReorderTarget(CellDetail detail) {
+    return switch (detail) {
+      TableHeaderDetail(columnKey: final key) => key == to,
+      TableCellDetail(columnKey: final key) => key == to,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'ReorderPredicate(from: $from, to: $to, fromPinned: $fromPinned, toPinned: $toPinned, afterTo: $afterTo)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is ReorderPredicate &&
+        other.from == from &&
+        other.to == to &&
+        other.fromPinned == fromPinned &&
+        other.toPinned == toPinned &&
+        other.afterTo == afterTo;
+  }
+
+  @override
+  int get hashCode {
+    return from.hashCode ^
+        to.hashCode ^
+        fromPinned.hashCode ^
+        toPinned.hashCode ^
+        afterTo.hashCode;
+  }
+}

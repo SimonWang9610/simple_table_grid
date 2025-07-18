@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/key_ordering.dart';
+import 'package:simple_table_grid/src/components/reorder_interfaces.dart';
 
-abstract base class TableColumnController with ChangeNotifier {
+abstract base class TableColumnController
+    with ChangeNotifier, TableKeyReorderMixin<ColumnKey> {
   /// Adds a list of columns to the controller.
   /// If a column already exists, it will be ignored.
   /// Notifies listeners if any new columns were added.
@@ -32,13 +34,6 @@ abstract base class TableColumnController with ChangeNotifier {
   /// Unpins a column, moving it to the start of the non-pinned columns.
   void unpin(ColumnKey column);
 
-  /// Reorders a column from one position to another.
-  ///
-  /// If the index of [from] is less than the index of [to], [from] will come after [to].
-  /// If the index of [from] is greater than the index of [to], [from] will come before [to].
-  /// If [from] and [to] are the same, nothing will happen.
-  void reorder(ColumnKey from, ColumnKey to);
-
   /// the number of columns in the controller, including pinned and non-pinned.
   int get count;
 
@@ -65,13 +60,13 @@ final class TableHeaderController extends TableColumnController
 
         for (final column in pinnedColumns) {
           if (!allSet.contains(column)) {
-            return false; // Duplicate found
+            return false;
           }
         }
 
         return true;
       }(),
-      "Duplicate columns found in pinned and non-pinned lists",
+      "pinned columns must be a subset of the columns",
     );
 
     final nonPinned = <ColumnKey>[];
@@ -187,30 +182,101 @@ final class TableHeaderController extends TableColumnController
     notify();
   }
 
+  ReorderPredicate<ColumnKey>? _reorderPredicate;
+
   @override
-  void reorder(ColumnKey from, ColumnKey to) {
+  ReorderPredicate<ColumnKey>? get reorderPredicate => _reorderPredicate;
+
+  @override
+  void reordering(ColumnKey from, ColumnKey? to) {
+    if (to == null) {
+      _reorderPredicate = null; // Reset if no target
+      notify();
+      return;
+    }
+
+    ReorderPredicate<ColumnKey>? predicate;
+
     final fromPinned = _pinnedOrdering.contains(from);
     final toPinned = _pinnedOrdering.contains(to);
 
     if (fromPinned && toPinned) {
-      _pinnedOrdering.reorder(from, to);
+      predicate = ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: _pinnedOrdering.isAfter(from, to),
+      );
     } else if (!fromPinned && !toPinned) {
-      _nonPinnedOrdering.reorder(from, to);
+      predicate = ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: _nonPinnedOrdering.isAfter(from, to),
+      );
     } else if (fromPinned && !toPinned) {
-      _pinnedOrdering.remove(from);
-      _nonPinnedOrdering.add(from);
-      _nonPinnedOrdering.reorder(from, to);
+      predicate = ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: false,
+      );
     } else if (!fromPinned && toPinned) {
-      _nonPinnedOrdering.remove(from);
-      _pinnedOrdering.add(from);
-      _pinnedOrdering.reorder(from, to);
+      predicate = ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: false,
+      );
     }
 
-    notify();
+    if (_reorderPredicate != predicate) {
+      _reorderPredicate = predicate;
+      notify();
+    }
+  }
+
+  @override
+  void confirmReordering(bool apply) {
+    bool shouldNotify = _reorderPredicate != null;
+
+    if (apply && _reorderPredicate != null) {
+      final from = _reorderPredicate!.from;
+      final to = _reorderPredicate!.to;
+      final fromPinned = _reorderPredicate!.fromPinned;
+      final toPinned = _reorderPredicate!.toPinned;
+
+      if (fromPinned && toPinned) {
+        _pinnedOrdering.reorder(from, to);
+      } else if (!fromPinned && !toPinned) {
+        _nonPinnedOrdering.reorder(from, to);
+      } else if (fromPinned && !toPinned) {
+        _pinnedOrdering.remove(from);
+        _nonPinnedOrdering.add(from);
+        _nonPinnedOrdering.reorder(from, to);
+      } else if (!fromPinned && toPinned) {
+        _nonPinnedOrdering.remove(from);
+        _pinnedOrdering.add(from);
+        _pinnedOrdering.reorder(from, to);
+      }
+
+      shouldNotify = true;
+    }
+
+    _reorderPredicate = null; // Reset after applying
+
+    if (shouldNotify) {
+      notify();
+    }
   }
 
   @override
   void dispose() {
+    _reorderPredicate = null;
     _pinnedOrdering.reset();
     _nonPinnedOrdering.reset();
     super.dispose();
