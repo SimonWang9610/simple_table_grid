@@ -60,13 +60,13 @@ final class TableHeaderController extends TableColumnController
 
         for (final column in pinnedColumns) {
           if (!allSet.contains(column)) {
-            return false; // Duplicate found
+            return false;
           }
         }
 
         return true;
       }(),
-      "Duplicate columns found in pinned and non-pinned lists",
+      "pinned columns must be a subset of the columns",
     );
 
     final nonPinned = <ColumnKey>[];
@@ -182,53 +182,96 @@ final class TableHeaderController extends TableColumnController
     notify();
   }
 
-  ReorderPredicate? _reorderPredicate;
+  ReorderPredicate<ColumnKey>? _reorderPredicate;
 
   @override
-  ReorderPredicate? get reorderPredicate => _reorderPredicate;
+  ReorderPredicate<ColumnKey>? get reorderPredicate => _reorderPredicate;
 
   @override
-  void predicateReorder(ColumnKey from, ColumnKey to) {
+  void reordering(ColumnKey from, ColumnKey? to) {
+    if (to == null) {
+      _reorderPredicate = null; // Reset if no target
+      notify();
+      return;
+    }
+
+    ReorderPredicate<ColumnKey>? predicate;
+
     final fromPinned = _pinnedOrdering.contains(from);
     final toPinned = _pinnedOrdering.contains(to);
 
     if (fromPinned && toPinned) {
-      _reorderPredicate = _pinnedOrdering.predicate(from, to);
+      predicate = ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: _pinnedOrdering.isAfter(from, to),
+      );
     } else if (!fromPinned && !toPinned) {
-      _reorderPredicate = _nonPinnedOrdering.predicate(from, to);
+      predicate = ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: _nonPinnedOrdering.isAfter(from, to),
+      );
     } else if (fromPinned && !toPinned) {
-      _reorderPredicate =
-          ReorderPredicate(candidate: to, afterCandidate: false);
+      predicate = ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: false,
+      );
     } else if (!fromPinned && toPinned) {
-      _reorderPredicate =
-          ReorderPredicate(candidate: to, afterCandidate: false);
+      predicate = ReorderPredicate(
+        from: from,
+        to: to,
+        fromPinned: fromPinned,
+        toPinned: toPinned,
+        afterTo: false,
+      );
     }
 
-    notify();
+    if (_reorderPredicate != predicate) {
+      _reorderPredicate = predicate;
+      notify();
+    }
   }
 
   @override
-  void reorder(ColumnKey from, ColumnKey to) {
-    final fromPinned = _pinnedOrdering.contains(from);
-    final toPinned = _pinnedOrdering.contains(to);
+  void confirmReordering(bool apply) {
+    bool shouldNotify = _reorderPredicate != null;
 
-    if (fromPinned && toPinned) {
-      _pinnedOrdering.reorder(from, to);
-    } else if (!fromPinned && !toPinned) {
-      _nonPinnedOrdering.reorder(from, to);
-    } else if (fromPinned && !toPinned) {
-      _pinnedOrdering.remove(from);
-      _nonPinnedOrdering.add(from);
-      _nonPinnedOrdering.reorder(from, to);
-    } else if (!fromPinned && toPinned) {
-      _nonPinnedOrdering.remove(from);
-      _pinnedOrdering.add(from);
-      _pinnedOrdering.reorder(from, to);
+    if (apply && _reorderPredicate != null) {
+      final from = _reorderPredicate!.from;
+      final to = _reorderPredicate!.to;
+      final fromPinned = _reorderPredicate!.fromPinned;
+      final toPinned = _reorderPredicate!.toPinned;
+
+      if (fromPinned && toPinned) {
+        _pinnedOrdering.reorder(from, to);
+      } else if (!fromPinned && !toPinned) {
+        _nonPinnedOrdering.reorder(from, to);
+      } else if (fromPinned && !toPinned) {
+        _pinnedOrdering.remove(from);
+        _nonPinnedOrdering.add(from);
+        _nonPinnedOrdering.reorder(from, to);
+      } else if (!fromPinned && toPinned) {
+        _nonPinnedOrdering.remove(from);
+        _pinnedOrdering.add(from);
+        _pinnedOrdering.reorder(from, to);
+      }
+
+      shouldNotify = true;
     }
 
-    _reorderPredicate = null;
+    _reorderPredicate = null; // Reset after applying
 
-    notify();
+    if (shouldNotify) {
+      notify();
+    }
   }
 
   @override

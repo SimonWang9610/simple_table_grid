@@ -5,6 +5,9 @@ class CellTheme {
   final Color? hoveringColor;
   final Color? selectedColor;
   final Color? unselectedColor;
+
+  /// The color used to indicate the cell is a reorder target.
+  /// This color is used when the cell is being dragged over a reorder target.
   final Color? reorderTargetColor;
 
   const CellTheme({
@@ -29,6 +32,8 @@ class TableGridThemeData {
   /// The border for the table grid.
   final TableGridBorder? border;
 
+  /// The border for reorder targets in the table grid.
+  /// This border is used to visually indicate where a cell is targeted for reordering.
   final TableGridBorder? reorderTargetBorder;
 
   const TableGridThemeData({

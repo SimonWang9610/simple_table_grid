@@ -244,10 +244,7 @@ final class TableDataController extends TableRowController
   ReorderPredicate<RowKey>? get reorderPredicate => _reorderPredicate;
 
   @override
-  void predicateReorder(
-    RowKey from,
-    RowKey to,
-  ) {
+  void reordering(RowKey from, RowKey? to) {
     assert(
       _rows.containsKey(from),
       "From key $from is not in the data source",
@@ -257,26 +254,28 @@ final class TableDataController extends TableRowController
       "To key $to is not in the data source",
     );
 
-    _reorderPredicate = _searcher.current.predicate(from, to);
+    if (to == null) {
+      if (_reorderPredicate == null) return;
+      _reorderPredicate = null; // reset the predicate if no target
+      notify();
+      return;
+    }
 
-    notify();
+    final predicate = _searcher.current.predicate(from, to);
+
+    if (_reorderPredicate != predicate) {
+      _reorderPredicate = predicate;
+      notify();
+    }
   }
 
   @override
-  void reorder(RowKey from, RowKey to) {
-    assert(
-      _rows.containsKey(from),
-      "From key $from is not in the data source",
-    );
-    assert(
-      _rows.containsKey(to),
-      "To key $to is not in the data source",
-    );
-
-    _searcher.current.reorder(from, to);
-    _reorderPredicate = null; // reset the predicate after reordering
-
-    notify();
+  void confirmReordering(bool apply) {
+    if (apply && _reorderPredicate != null) {
+      _searcher.current.applyReorder(_reorderPredicate!);
+      _reorderPredicate = null; // reset the predicate after applying
+      notify();
+    }
   }
 
   @override
@@ -469,9 +468,6 @@ final class PaginatedTableDataController extends TableDataController
 
   @override
   void setHeaderVisibility(bool alwaysShowHeader) {}
-
-  @override
-  void reorder(RowKey from, RowKey to) {}
 
   int _currentPage = 0;
 

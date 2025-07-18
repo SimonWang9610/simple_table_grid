@@ -133,24 +133,24 @@ class _TableGridState extends State<TableGrid> {
           isRightEdge: rightEdge,
           isBottomEdge: bottomEdge,
           detail: detail,
-          willReorderTarget: widget.controller.columns.reorderPredicate,
+          reorderMixin: widget.controller.columns,
           builder: widget.headerBuilder,
           dragEnabled: widget.reorderColumn,
           resizeEnabled: widget.resizeColumn,
           cursorDelegate: widget.controller.sizer as TableCursorDelegate,
-          onReorder: (from, to) {
-            widget.controller.columns.reorder(from.columnKey, to.columnKey);
-          },
-          onWillReorder: (from, to) {
-            widget.controller.columns.predicateReorder(
-              from.columnKey,
-              to.columnKey,
-            );
-          },
+          // onReorder: (from, to) {
+          //   widget.controller.columns.reorder(from.columnKey, to.columnKey);
+          // },
+          // onWillReorder: (from, to) {
+          //   widget.controller.columns.predicateReorder(
+          //     from.columnKey,
+          //     to.columnKey,
+          //   );
+          // },
         ),
       TableCellDetail() => CellDetailWidget(
           detail: detail,
-          willReorderTarget: widget.controller.rows.reorderPredicate,
+          reorderMixin: widget.controller.rows,
           isRightEdge: rightEdge,
           isBottomEdge: bottomEdge,
           dragEnabled:
@@ -159,12 +159,12 @@ class _TableGridState extends State<TableGrid> {
               widget.controller.paginator == null ? widget.resizeRow : false,
           cursorDelegate: widget.controller.sizer as TableCursorDelegate,
           builder: widget.builder,
-          onReorder: (from, to) {
-            widget.controller.rows.reorder(from.rowKey, to.rowKey);
-          },
-          onWillReorder: (from, to) {
-            widget.controller.rows.predicateReorder(from.rowKey, to.rowKey);
-          },
+          // onReorder: (from, to) {
+          //   widget.controller.rows.reorder(from.rowKey, to.rowKey);
+          // },
+          // onWillReorder: (from, to) {
+          //   widget.controller.rows.predicateReorder(from.rowKey, to.rowKey);
+          // },
         ),
     };
   }

@@ -7,7 +7,7 @@ abstract class KeyOrdering<T extends TableKey> {
   void reorder(T from, T to);
   void reset();
 
-  ReorderPredicate<T>? predicate(T from, T to);
+  bool isAfter(T from, T to);
   bool contains(T key);
 
   int? indexOf(T key);
@@ -185,20 +185,17 @@ class QuickOrdering<T extends TableKey> extends KeyOrdering<T> {
   }
 
   @override
-  ReorderPredicate<T>? predicate(T from, T to) {
+  bool isAfter(T from, T to) {
     if (from == to ||
         !_keyOrdering.containsKey(from) ||
         !_keyOrdering.containsKey(to)) {
-      return null;
+      return false;
     }
 
     final fromIndex = _keyOrdering[from]!;
     final toIndex = _keyOrdering[to]!;
 
-    return ReorderPredicate<T>(
-      candidate: to,
-      afterCandidate: fromIndex < toIndex,
-    );
+    return fromIndex >= toIndex;
   }
 
   @override
@@ -328,18 +325,15 @@ class EfficientOrdering<T extends TableKey> extends KeyOrdering<T> {
   }
 
   @override
-  ReorderPredicate<T>? predicate(T from, T to) {
+  bool isAfter(T from, T to) {
     if (from == to || !_keys.contains(from) || !_keys.contains(to)) {
-      return null;
+      return false;
     }
 
     final fromIndex = _keys.indexOf(from);
     final toIndex = _keys.indexOf(to);
 
-    return ReorderPredicate<T>(
-      candidate: to,
-      afterCandidate: fromIndex < toIndex,
-    );
+    return fromIndex >= toIndex;
   }
 
   @override
