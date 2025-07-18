@@ -35,3 +35,20 @@ class ResizeTarget<T extends TableKey> {
     return 'ResizeTarget(key: $key, direction: $direction)';
   }
 }
+
+class ReorderPredicate<T extends TableKey> {
+  final T candidate;
+  final bool afterCandidate;
+
+  const ReorderPredicate({
+    required this.candidate,
+    this.afterCandidate = true,
+  });
+
+  bool isReorderTarget(CellDetail detail) {
+    return switch (detail) {
+      TableHeaderDetail(columnKey: final key) => key == candidate,
+      TableCellDetail(columnKey: final key) => key == candidate,
+    };
+  }
+}

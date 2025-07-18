@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 import 'package:simple_table_grid/src/components/key_ordering.dart';
+import 'package:simple_table_grid/src/components/reorder_interfaces.dart';
 
-abstract base class TableColumnController with ChangeNotifier {
+abstract base class TableColumnController
+    with ChangeNotifier, TableKeyReorderMixin<ColumnKey> {
   /// Adds a list of columns to the controller.
   /// If a column already exists, it will be ignored.
   /// Notifies listeners if any new columns were added.
@@ -31,13 +33,6 @@ abstract base class TableColumnController with ChangeNotifier {
 
   /// Unpins a column, moving it to the start of the non-pinned columns.
   void unpin(ColumnKey column);
-
-  /// Reorders a column from one position to another.
-  ///
-  /// If the index of [from] is less than the index of [to], [from] will come after [to].
-  /// If the index of [from] is greater than the index of [to], [from] will come before [to].
-  /// If [from] and [to] are the same, nothing will happen.
-  void reorder(ColumnKey from, ColumnKey to);
 
   /// the number of columns in the controller, including pinned and non-pinned.
   int get count;
@@ -187,6 +182,31 @@ final class TableHeaderController extends TableColumnController
     notify();
   }
 
+  ReorderPredicate? _reorderPredicate;
+
+  @override
+  ReorderPredicate? get reorderPredicate => _reorderPredicate;
+
+  @override
+  void predicateReorder(ColumnKey from, ColumnKey to) {
+    final fromPinned = _pinnedOrdering.contains(from);
+    final toPinned = _pinnedOrdering.contains(to);
+
+    if (fromPinned && toPinned) {
+      _reorderPredicate = _pinnedOrdering.predicate(from, to);
+    } else if (!fromPinned && !toPinned) {
+      _reorderPredicate = _nonPinnedOrdering.predicate(from, to);
+    } else if (fromPinned && !toPinned) {
+      _reorderPredicate =
+          ReorderPredicate(candidate: to, afterCandidate: false);
+    } else if (!fromPinned && toPinned) {
+      _reorderPredicate =
+          ReorderPredicate(candidate: to, afterCandidate: false);
+    }
+
+    notify();
+  }
+
   @override
   void reorder(ColumnKey from, ColumnKey to) {
     final fromPinned = _pinnedOrdering.contains(from);
@@ -206,11 +226,14 @@ final class TableHeaderController extends TableColumnController
       _pinnedOrdering.reorder(from, to);
     }
 
+    _reorderPredicate = null;
+
     notify();
   }
 
   @override
   void dispose() {
+    _reorderPredicate = null;
     _pinnedOrdering.reset();
     _nonPinnedOrdering.reset();
     super.dispose();

@@ -5,11 +5,13 @@ class CellTheme {
   final Color? hoveringColor;
   final Color? selectedColor;
   final Color? unselectedColor;
+  final Color? reorderTargetColor;
 
   const CellTheme({
     this.hoveringColor,
     this.selectedColor,
     this.unselectedColor,
+    this.reorderTargetColor,
   });
 }
 
@@ -27,11 +29,38 @@ class TableGridThemeData {
   /// The border for the table grid.
   final TableGridBorder? border;
 
+  final TableGridBorder? reorderTargetBorder;
+
   const TableGridThemeData({
     this.cellTheme = const CellTheme(),
     this.headerTheme = const CellTheme(),
     this.border,
+    this.reorderTargetBorder,
   });
+
+  EdgeInsets? calculatePadding(
+    bool rightEdge,
+    bool bottomEdge,
+    bool isReorderTarget,
+  ) {
+    if (isReorderTarget && reorderTargetBorder != null) {
+      return reorderTargetBorder!.calculatePadding(rightEdge, bottomEdge);
+    }
+
+    return border?.calculatePadding(rightEdge, bottomEdge);
+  }
+
+  Border? calculateBorder(
+    bool rightEdge,
+    bool bottomEdge,
+    bool isReorderTarget,
+  ) {
+    if (isReorderTarget && reorderTargetBorder != null) {
+      return reorderTargetBorder!.calculateBorder(rightEdge, bottomEdge);
+    }
+
+    return border?.calculateBorder(rightEdge, bottomEdge);
+  }
 }
 
 class TableGridTheme extends InheritedWidget {

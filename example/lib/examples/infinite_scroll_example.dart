@@ -167,15 +167,27 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
                         hoveringColor: Colors.grey.shade200,
                         selectedColor: Colors.green.shade100,
                         unselectedColor: Colors.white,
+                        reorderTargetColor: Colors.red.shade100,
                       ),
                       headerTheme: CellTheme(
                         hoveringColor: Colors.blue.shade100,
                         selectedColor: Colors.blue.shade200,
                         unselectedColor: Colors.yellow.shade100,
+                        reorderTargetColor: Colors.red.shade100,
+                      ),
+                      reorderTargetBorder: TableGridBorder(
+                        vertical: BorderSide(
+                          color: Colors.red,
+                          width: 2,
+                        ),
+                        horizontal: BorderSide(
+                          color: Colors.red,
+                          width: 2,
+                        ),
                       ),
                       border: TableGridBorder(
                         vertical: BorderSide(
-                          color: Colors.red,
+                          color: Colors.black,
                           width: 0.5,
                         ),
                         horizontal: BorderSide(

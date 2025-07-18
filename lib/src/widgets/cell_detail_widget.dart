@@ -13,12 +13,14 @@ class DraggableCellWidget<T extends CellDetail> extends StatelessWidget {
   final Widget child;
   final Widget? feedback;
   final DragCellCallback<T> onAccept;
+  final DragCellCallback<T> onWillAccept;
   final VoidCallback? onDragStarted;
   final VoidCallback? onDragEnd;
   const DraggableCellWidget({
     super.key,
     required this.detail,
     required this.onAccept,
+    required this.onWillAccept,
     this.onDragStarted,
     this.onDragEnd,
     required this.child,
@@ -29,6 +31,9 @@ class DraggableCellWidget<T extends CellDetail> extends StatelessWidget {
   Widget build(BuildContext context) {
     final target = DragTarget<T>(
       onAcceptWithDetails: (from) => onAccept(from.data, detail),
+      onMove: (from) {
+        onWillAccept(from.data, detail);
+      },
       builder: (ctx, _, __) => child,
     );
 
@@ -53,9 +58,11 @@ const _defaultSize = Size(100, 50);
 
 class CellDetailWidget<T extends CellDetail> extends StatefulWidget {
   final T detail;
+  final ReorderPredicate? willReorderTarget;
   final TableCursorDelegate cursorDelegate;
   final TableCellDetailBuilder<T> builder;
   final DragCellCallback<T>? onReorder;
+  final DragCellCallback<T>? onWillReorder;
   final bool dragEnabled;
   final bool resizeEnabled;
   final bool isRightEdge;
@@ -71,6 +78,8 @@ class CellDetailWidget<T extends CellDetail> extends StatefulWidget {
     required this.detail,
     required this.builder,
     this.onReorder,
+    this.onWillReorder,
+    this.willReorderTarget,
   });
 
   @override
@@ -97,14 +106,19 @@ class _CellDetailWidgetState<T extends CellDetail>
 
     final gridTheme = TableGridTheme.of(context);
 
-    final padding = gridTheme.border?.calculatePadding(
+    final isReorderTarget =
+        widget.willReorderTarget?.isReorderTarget(widget.detail) ?? false;
+
+    final padding = gridTheme.calculatePadding(
       widget.isRightEdge,
       widget.isBottomEdge,
+      isReorderTarget,
     );
 
-    final border = gridTheme.border?.calculateBorder(
+    final border = gridTheme.calculateBorder(
       widget.isRightEdge,
       widget.isBottomEdge,
+      isReorderTarget,
     );
 
     final cellTheme = switch (widget.detail) {
@@ -127,6 +141,7 @@ class _CellDetailWidgetState<T extends CellDetail>
           detail: widget.detail,
           feedback: _buildFeedback(child, cellTheme),
           onAccept: widget.onReorder!,
+          onWillAccept: widget.onWillReorder!,
           onDragStarted: () => widget.cursorDelegate.setDragging(true),
           onDragEnd: () => widget.cursorDelegate.setDragging(false),
           child: child,
@@ -144,11 +159,13 @@ class _CellDetailWidgetState<T extends CellDetail>
     child = DecoratedBox(
       decoration: BoxDecoration(
         border: border,
-        color: widget.detail.selected
-            ? cellTheme.selectedColor
-            : widget.detail.hovering
-                ? cellTheme.hoveringColor
-                : cellTheme.unselectedColor,
+        color: isReorderTarget
+            ? cellTheme.reorderTargetColor
+            : widget.detail.selected
+                ? cellTheme.selectedColor
+                : widget.detail.hovering
+                    ? cellTheme.hoveringColor
+                    : cellTheme.unselectedColor,
       ),
       child: child,
     );

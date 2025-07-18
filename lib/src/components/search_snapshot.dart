@@ -91,6 +91,34 @@ class SearchSnapshot {
     }
   }
 
+  ReorderPredicate<RowKey>? predicate(RowKey from, RowKey to) {
+    final fromPinned = _pinnedOrdering.contains(from);
+
+    assert(
+      fromPinned || _nonPinnedOrdering.contains(from),
+      "From key $from is not in the pinned or non-pinned ordering",
+    );
+
+    final toPinned = _pinnedOrdering.contains(to);
+
+    assert(
+      toPinned || _nonPinnedOrdering.contains(to),
+      "To key $to is not in the pinned or non-pinned ordering",
+    );
+
+    if (fromPinned && toPinned) {
+      return _pinnedOrdering.predicate(from, to);
+    } else if (!fromPinned && !toPinned) {
+      return _nonPinnedOrdering.predicate(from, to);
+    } else if (fromPinned && !toPinned) {
+      return ReorderPredicate(candidate: to, afterCandidate: false);
+    } else if (!fromPinned && toPinned) {
+      return ReorderPredicate(candidate: to, afterCandidate: false);
+    }
+
+    return null; // Should not reach here
+  }
+
   RowKey? previous(RowKey key) {
     final pinnedIndex = _pinnedOrdering.indexOf(key);
 
