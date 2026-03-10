@@ -669,8 +669,6 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         end: ChildVicinity(xIndex: _lastPinnedColumn!, yIndex: _lastPinnedRow!),
       );
 
-      // Paint remaining visible pinned cells that represent the intersection of
-      // both pinned rows and columns.
       _paintGrid(
         context: context,
         offset: offset,
@@ -712,6 +710,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         ..style = PaintingStyle.stroke
         ..strokeWidth = _verticalBorderWidth;
 
+      /// line count = column count + 2 (including the leading and trailing border lines)
       final verticalSegmentCount = end.xIndex - start.xIndex + 2;
       final verticalPoints = Float32List(verticalSegmentCount * 4);
       int pointIndex = 0;
@@ -753,6 +752,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         ..style = PaintingStyle.stroke
         ..strokeWidth = _horizontalBorderWidth;
 
+      /// line count = row count + 2 (including the leading and trailing border lines)
       final horizontalSegmentCount = end.yIndex - start.yIndex + 2;
       final horizontalPoints = Float32List(horizontalSegmentCount * 4);
       int pointIndex = 0;
