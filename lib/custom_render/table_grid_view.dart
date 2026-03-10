@@ -10,6 +10,9 @@ extension ChildVicinityGridExt on ChildVicinity {
 }
 
 class TableGridView extends TwoDimensionalScrollView {
+  final BorderSide verticalBorderSide;
+  final BorderSide horizontalBorderSide;
+
   const TableGridView({
     super.key,
     super.primary,
@@ -22,6 +25,8 @@ class TableGridView extends TwoDimensionalScrollView {
     super.dragStartBehavior,
     super.keyboardDismissBehavior,
     super.clipBehavior,
+    this.verticalBorderSide = BorderSide.none,
+    this.horizontalBorderSide = BorderSide.none,
   });
 
   TableGridView.builder({
@@ -42,6 +47,8 @@ class TableGridView extends TwoDimensionalScrollView {
     required CellExtentBuilder rowExtentBuilder,
     required CellExtentBuilder columnExtentBuilder,
     required CellWidgetBuilder builder,
+    this.verticalBorderSide = BorderSide.none,
+    this.horizontalBorderSide = BorderSide.none,
   })  : assert(pinnedColumnCount >= 0),
         assert(pinnedRowCount >= 0),
         assert(rowCount >= 0),
@@ -73,6 +80,8 @@ class TableGridView extends TwoDimensionalScrollView {
     super.clipBehavior,
     required CellWidgetBuilder builder,
     required TableController controller,
+    this.verticalBorderSide = BorderSide.none,
+    this.horizontalBorderSide = BorderSide.none,
   }) : super(
           delegate: TableGridCellBuilderDelegate(
             columnCount: controller.columns.count,
@@ -100,6 +109,8 @@ class TableGridView extends TwoDimensionalScrollView {
       mainAxis: mainAxis,
       cacheExtent: cacheExtent,
       clipBehavior: clipBehavior,
+      verticalBorderSide: verticalBorderSide,
+      horizontalBorderSide: horizontalBorderSide,
     );
   }
 }

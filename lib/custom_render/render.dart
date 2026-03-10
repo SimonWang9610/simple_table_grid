@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
@@ -16,7 +17,44 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     required super.childManager,
     super.cacheExtent,
     super.clipBehavior,
-  });
+    BorderSide verticalBorderSide = BorderSide.none,
+    BorderSide horizontalBorderSide = BorderSide.none,
+  })  : _verticalBorderSide = verticalBorderSide,
+        _horizontalBorderSide = horizontalBorderSide;
+
+  BorderSide _verticalBorderSide;
+  BorderSide get verticalBorderSide => _verticalBorderSide;
+  set verticalBorderSide(BorderSide value) {
+    if (_verticalBorderSide == value) {
+      return;
+    }
+
+    _verticalBorderSide = value;
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  BorderSide _horizontalBorderSide;
+  BorderSide get horizontalBorderSide => _horizontalBorderSide;
+  set horizontalBorderSide(BorderSide value) {
+    if (_horizontalBorderSide == value) {
+      return;
+    }
+
+    _horizontalBorderSide = value;
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  double get _verticalBorderWidth =>
+      _verticalBorderSide.style == BorderStyle.none
+          ? 0.0
+          : _verticalBorderSide.width;
+
+  double get _horizontalBorderWidth =>
+      _horizontalBorderSide.style == BorderStyle.none
+          ? 0.0
+          : _horizontalBorderSide.width;
 
   @override
   CellLayoutExtentDelegate get delegate =>
@@ -142,15 +180,20 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         if (cell != null) {
           final data = parentDataOf(cell);
 
+          final cellWidth =
+              math.max(0.0, columnSpan.extent - _verticalBorderWidth);
+          final cellHeight =
+              math.max(0.0, rowSpan.extent - _horizontalBorderWidth);
+
           final constraints = BoxConstraints.tightFor(
-            width: columnSpan.extent,
-            height: rowSpan.extent,
+            width: cellWidth,
+            height: cellHeight,
           );
 
           cell.layout(constraints);
           data.layoutOffset = Offset(
-            columnOffset,
-            rowOffset,
+            columnOffset + _verticalBorderWidth,
+            rowOffset + _horizontalBorderWidth,
           );
         }
 
@@ -503,6 +546,13 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
             start: _firstNonPinnedCell!,
             end: _lastNonPinnedCell!,
           );
+
+          _paintGrid(
+            context: context,
+            offset: offset,
+            start: _firstNonPinnedCell!,
+            end: _lastNonPinnedCell!,
+          );
         },
         clipBehavior: clipBehavior,
         oldLayer: _clipCellsHandle.layer,
@@ -529,6 +579,19 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         ),
         (PaintingContext context, Offset offset) {
           _paintCells(
+            context: context,
+            offset: offset,
+            start: ChildVicinity(
+              xIndex: 0,
+              yIndex: _rowMetrics.firstNonPinned!,
+            ),
+            end: ChildVicinity(
+              xIndex: _lastPinnedColumn!,
+              yIndex: _rowMetrics.lastNonPinned!,
+            ),
+          );
+
+          _paintGrid(
             context: context,
             offset: offset,
             start: ChildVicinity(
@@ -577,6 +640,19 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
               yIndex: _lastPinnedRow!,
             ),
           );
+
+          _paintGrid(
+            context: context,
+            offset: offset,
+            start: ChildVicinity(
+              xIndex: _columnMetrics.firstNonPinned!,
+              yIndex: 0,
+            ),
+            end: ChildVicinity(
+              xIndex: _columnMetrics.lastNonPinned!,
+              yIndex: _lastPinnedRow!,
+            ),
+          );
         },
         clipBehavior: clipBehavior,
         oldLayer: _clipPinnedRowsHandle.layer,
@@ -586,15 +662,173 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     }
 
     if (_lastPinnedRow != null && _lastPinnedColumn != null) {
-      // Paint remaining visible pinned cells that represent the intersection of
-      // both pinned rows and columns.
       _paintCells(
         context: context,
         offset: offset,
         start: ChildVicinity(xIndex: 0, yIndex: 0),
         end: ChildVicinity(xIndex: _lastPinnedColumn!, yIndex: _lastPinnedRow!),
       );
+
+      // Paint remaining visible pinned cells that represent the intersection of
+      // both pinned rows and columns.
+      _paintGrid(
+        context: context,
+        offset: offset,
+        start: const ChildVicinity(xIndex: 0, yIndex: 0),
+        end: ChildVicinity(xIndex: _lastPinnedColumn!, yIndex: _lastPinnedRow!),
+      );
     }
+  }
+
+  void _paintGrid({
+    required PaintingContext context,
+    required ChildVicinity start,
+    required ChildVicinity end,
+    required Offset offset,
+  }) {
+    if (_verticalBorderWidth <= 0 && _horizontalBorderWidth <= 0) {
+      return;
+    }
+
+    final columnTranslation = _resolveColumnTranslation(start, end);
+    final rowTranslation = _resolveRowTranslation(start, end);
+
+    if (columnTranslation == null || rowTranslation == null) {
+      return;
+    }
+
+    final startX =
+        _columnMetrics[start.xIndex]!.leadingOffset + columnTranslation;
+    final endX = _columnMetrics[end.xIndex]!.trailingOffset + columnTranslation;
+    final startY = _rowMetrics[start.yIndex]!.leadingOffset + rowTranslation;
+    final endY = _rowMetrics[end.yIndex]!.trailingOffset + rowTranslation;
+    final clipBounds = context.canvas.getLocalClipBounds();
+    final clippedEndX = math.min(endX, clipBounds.right - offset.dx);
+    final clippedEndY = math.min(endY, clipBounds.bottom - offset.dy);
+
+    if (_verticalBorderWidth > 0) {
+      final verticalPaint = Paint()
+        ..color = _verticalBorderSide.color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _verticalBorderWidth;
+
+      final verticalSegmentCount = end.xIndex - start.xIndex + 2;
+      final verticalPoints = Float32List(verticalSegmentCount * 4);
+      int pointIndex = 0;
+      final yStart = offset.dy + startY;
+      final yEnd = offset.dy + clippedEndY;
+
+      for (int column = start.xIndex; column <= end.xIndex; column++) {
+        final x = _columnMetrics[column]!.leadingOffset +
+            columnTranslation +
+            _verticalBorderWidth / 2;
+        final xOffset = offset.dx + x;
+
+        verticalPoints[pointIndex++] = xOffset;
+        verticalPoints[pointIndex++] = yStart;
+        verticalPoints[pointIndex++] = xOffset;
+        verticalPoints[pointIndex++] = yEnd;
+      }
+
+      final trailingX = math.max(
+        startX + _verticalBorderWidth / 2,
+        clippedEndX - _verticalBorderWidth / 2,
+      );
+
+      verticalPoints[pointIndex++] = offset.dx + trailingX;
+      verticalPoints[pointIndex++] = yStart;
+      verticalPoints[pointIndex++] = offset.dx + trailingX;
+      verticalPoints[pointIndex++] = yEnd;
+
+      context.canvas.drawRawPoints(
+        PointMode.lines,
+        verticalPoints,
+        verticalPaint,
+      );
+    }
+
+    if (_horizontalBorderWidth > 0) {
+      final horizontalPaint = Paint()
+        ..color = _horizontalBorderSide.color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _horizontalBorderWidth;
+
+      final horizontalSegmentCount = end.yIndex - start.yIndex + 2;
+      final horizontalPoints = Float32List(horizontalSegmentCount * 4);
+      int pointIndex = 0;
+      final xStart = offset.dx + startX;
+      final xEnd = offset.dx + clippedEndX;
+
+      for (int row = start.yIndex; row <= end.yIndex; row++) {
+        final y = _rowMetrics[row]!.leadingOffset +
+            rowTranslation +
+            _horizontalBorderWidth / 2;
+        final yOffset = offset.dy + y;
+
+        horizontalPoints[pointIndex++] = xStart;
+        horizontalPoints[pointIndex++] = yOffset;
+        horizontalPoints[pointIndex++] = xEnd;
+        horizontalPoints[pointIndex++] = yOffset;
+      }
+
+      final trailingY = math.max(
+        startY + _horizontalBorderWidth / 2,
+        clippedEndY - _horizontalBorderWidth / 2,
+      );
+
+      horizontalPoints[pointIndex++] = xStart;
+      horizontalPoints[pointIndex++] = offset.dy + trailingY;
+      horizontalPoints[pointIndex++] = xEnd;
+      horizontalPoints[pointIndex++] = offset.dy + trailingY;
+
+      context.canvas.drawRawPoints(
+        PointMode.lines,
+        horizontalPoints,
+        horizontalPaint,
+      );
+    }
+  }
+
+  double? _resolveColumnTranslation(ChildVicinity start, ChildVicinity end) {
+    for (int row = start.yIndex; row <= end.yIndex; row++) {
+      final cell =
+          getChildFor(ChildVicinity(xIndex: start.xIndex, yIndex: row));
+      if (cell == null) {
+        continue;
+      }
+
+      final data = parentDataOf(cell);
+      if (data.paintOffset == null) {
+        continue;
+      }
+
+      return data.paintOffset!.dx -
+          _verticalBorderWidth -
+          _columnMetrics[start.xIndex]!.leadingOffset;
+    }
+
+    return null;
+  }
+
+  double? _resolveRowTranslation(ChildVicinity start, ChildVicinity end) {
+    for (int column = start.xIndex; column <= end.xIndex; column++) {
+      final cell =
+          getChildFor(ChildVicinity(xIndex: column, yIndex: start.yIndex));
+      if (cell == null) {
+        continue;
+      }
+
+      final data = parentDataOf(cell);
+      if (data.paintOffset == null) {
+        continue;
+      }
+
+      return data.paintOffset!.dy -
+          _horizontalBorderWidth -
+          _rowMetrics[start.yIndex]!.leadingOffset;
+    }
+
+    return null;
   }
 
   void _paintCells({
