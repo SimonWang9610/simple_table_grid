@@ -34,8 +34,6 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
   int _pinnedColumnCount = 0;
   int _pinnedRowCount = 0;
 
-  final Map<int, Extent> _cachedDynamicRowExtents = {};
-
   TableGridCellBuilderDelegate({
     required int columnCount,
     required int rowCount,
@@ -98,7 +96,6 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
   set rowCount(int value) {
     assert(value >= 0);
     assert(value >= pinnedRowCount);
-    _cachedDynamicRowExtents.removeWhere((key, _) => key >= value);
     maxYIndex = value - 1;
   }
 

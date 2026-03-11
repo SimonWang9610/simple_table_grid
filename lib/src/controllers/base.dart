@@ -81,11 +81,13 @@ abstract base class TableController with ChangeNotifier {
   /// When building the cell widget, [CellDetail] would provide the hovering and selection state
   /// for the cell.
   ///
-  /// [defaultRowExtent] can be set to [Extent.auto] to make rows whose extent is not explicitly defined in [rowExtents]
-  /// automatically measure their extent based on the content.
+  /// [defaultRowExtent] can be configured with an auto-measuring extent (for example, using
+  /// `const Extent.fixed(someValue).auto()`) to make rows whose extent is not explicitly defined
+  /// in [rowExtents] automatically measure their extent based on the content.
   /// After automatically measured, the extent will be updated in-place for each auto-extent row.
   ///
-  /// [defaultColumnExtent] and [columnExtents] cannot be set to [Extent.auto] because automatic measurement of column extent is not supported yet.
+  /// [defaultColumnExtent] and [columnExtents] must not use `auto()` because automatic measurement
+  /// of column extent is not supported yet.
   factory TableController({
     required List<HeaderData> columns,
     List<ColumnKey> pinnedColumns = const [],
@@ -114,11 +116,13 @@ abstract base class TableController with ChangeNotifier {
   /// Creates a new [TableController] with pagination support.
   /// This controller does not support pin/unpin/reorder/setHeaderVisibility operations.
   ///
-  /// [defaultRowExtent] can be set to [Extent.auto] to make rows whose extent is not explicitly defined in [rowExtents]
-  /// automatically measure their extent based on the content.
+  /// [defaultRowExtent] can be configured with an auto-measuring extent (for example, using
+  /// `const Extent.fixed(someValue).auto()`) to make rows whose extent is not explicitly defined
+  /// in [rowExtents] automatically measure their extent based on the content.
   /// After automatically measured, the extent will be updated in-place for each auto-extent row.
   ///
-  /// [defaultColumnExtent] and [columnExtents] cannot be set to [Extent.auto] because automatic measurement of column extent is not supported yet.
+  /// [defaultColumnExtent] and [columnExtents] must not use `auto()` because automatic measurement
+  /// of column extent is not supported yet.
   factory TableController.paginated({
     required int pageSize,
     required List<HeaderData> columns,

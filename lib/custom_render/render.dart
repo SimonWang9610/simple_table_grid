@@ -918,6 +918,8 @@ mixin _DynamicRowMeasurement on RenderTwoDimensionalViewport, _ViewportMetrics {
         );
 
         if (needSetupParentData) {
+          /// It may have UI flicker if we set the layout offset for cells during the measurement phase,
+          /// but it is necessary to ensure the correct layout of cells in dynamic rows,
           final data = parentDataOf(cell);
           final columnLeading = _columnMetrics[column]?.leadingOffset ?? 0;
           final rowLeading = _rowMetrics[row]?.leadingOffset ?? 0;
@@ -934,6 +936,7 @@ mixin _DynamicRowMeasurement on RenderTwoDimensionalViewport, _ViewportMetrics {
       final newExtent =
           oldExtent.accept(maxCellHeight + _horizontalBorderWidth);
 
+      /// This is one-shot measurement and update,
       if (oldExtent != newExtent) {
         delegate.updateMeasuredRowExtent(row, newExtent);
       }
@@ -941,6 +944,8 @@ mixin _DynamicRowMeasurement on RenderTwoDimensionalViewport, _ViewportMetrics {
 
     _dynamicRows.clear();
 
+    /// If at least one row is measured, we need to schedule a new layout pass
+    /// to update the row metrics and layout the cells with the correct row extent.
     if (hasRowMeasured) {
       _needsMetricsRefresh = true;
       _scheduleMetricsRefresh();

@@ -125,6 +125,9 @@ final class TableExtentController extends TableSizer
     notify();
   }
 
+  /// Purposely do not notify listeners in this method.
+  /// Typically, this method is called during the measurement phase in the render object,
+  /// and notifying listeners during that phase may cause unwanted side effects and assertions in the render object.
   @override
   void updateMeasuredRowExtent(int rowIndex, Extent extent) {
     assert(!extent.isDynamic, 'The new extent must not be dynamic.');
