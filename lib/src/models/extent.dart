@@ -25,7 +25,15 @@ sealed class Extent {
 
   Extent accept(double delta);
 
-  Extent auto() => _AutoExtent(this);
+  /// Returns an [Extent] that behaves like this extent but is dynamic,
+  /// meaning it will be measured and respect the content size instead of being fixed to a specific pixel value.
+  Extent auto() {
+    if (this is _AutoExtent) {
+      return this;
+    }
+
+    return _AutoExtent(this);
+  }
 }
 
 final class _FixedExtent extends Extent {

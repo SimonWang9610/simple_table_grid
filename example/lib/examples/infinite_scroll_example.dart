@@ -98,6 +98,7 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
       defaultRowExtent: Extent.fixed(60),
       defaultColumnExtent: Extent.range(pixels: 200, min: 100),
       columnExtents: columnExtents,
+      useAutoRowExtent: true,
     );
   }
 

@@ -67,6 +67,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
   @override
   void layoutChildSequence() {
     _laidOutVicinities.clear();
+    print(
+        "Performing layout: needsMetricsRefresh=$_needsMetricsRefresh, needsDelegateRebuild=$needsDelegateRebuild, didResize=$didResize");
 
     if (needsDelegateRebuild || didResize || _needsMetricsRefresh) {
       _columnMetrics.clear();
@@ -162,7 +164,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
       );
     }
 
-    _measureAndCacheDynamicRows();
+    _measureDynamicRows();
   }
 
   void _layoutCells({
@@ -212,10 +214,10 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     }
   }
 
-  void _measureAndCacheDynamicRows() {
-    if (_dynamicRows.isEmpty) {
-      return;
-    }
+  void _measureDynamicRows() {
+    if (_dynamicRows.isEmpty) return;
+
+    bool hasRowMeasured = false;
 
     for (final row in _dynamicRows) {
       if (row < 0 || row >= delegate.rowCount) {
@@ -239,11 +241,14 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         } else {
           cell = buildOrObtainChildFor(vicinity);
           _laidOutVicinities.add(vicinity);
+          print("=====Measuring cell at $vicinity for dynamic row $row");
         }
 
         if (cell == null) {
           continue;
         }
+
+        hasRowMeasured = true;
 
         final cellWidth =
             math.max(0.0, columnSpan.extent - _verticalBorderWidth);
@@ -265,13 +270,14 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
           .getRowExtent(row)
           .accept(maxCellHeight + _horizontalBorderWidth);
 
-      delegate.cacheDynamicRowExtent(row, newRowExtent);
+      delegate.updateMeasuredRowExtent(row, newRowExtent);
     }
 
-    if (_dynamicRows.isNotEmpty) {
+    _dynamicRows.clear();
+
+    if (hasRowMeasured) {
+      print("Measured dynamic rows, schedule refreshing layout");
       _needsMetricsRefresh = true;
-      _dynamicRows.clear();
-      delegate.flushCachedDynamicRowExtents();
       _scheduleMetricsRefresh();
     }
   }
@@ -442,6 +448,9 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
       final span = _rowMetrics.remove(row) ?? _Span();
       final vExtent = delegate.getRowExtent(row);
 
+      /// If the row extent is dynamic, we need to measure the cells in that row to determine the actual extent.
+      /// We will schedule a post-frame callback to do that after the layout is complete,
+      /// as we cannot [markNeedsLayout] during performLayout.
       if (vExtent.isDynamic) {
         _dynamicRows.add(row);
       }

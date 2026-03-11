@@ -1,9 +1,10 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/custom_render/delegate.dart';
 import 'package:simple_table_grid/simple_table_grid.dart' hide TableIndexFinder;
 import 'package:simple_table_grid/src/controllers/base.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 
-abstract base class TableSizer with ChangeNotifier {
+abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
   /// set the extent at the given [index] for the row.
   void setRowExtent(int index, Extent extent);
 
@@ -30,8 +31,6 @@ abstract base class TableSizer with ChangeNotifier {
 
   /// Set the [ResizeTarget] to [resize] on the targeted column or row.
   void setResizeTarget(ResizeTarget? target);
-
-  bool replaceAutoRowExtent(int index, Extent newExtent);
 }
 
 final class TableExtentController extends TableSizer
@@ -122,17 +121,13 @@ final class TableExtentController extends TableSizer
   }
 
   @override
-  bool replaceAutoRowExtent(int index, Extent newExtent) {
-    assert(!newExtent.isDynamic, 'The new extent must not be dynamic.');
-    final current = getRowExtent(index);
+  void updateMeasuredRowExtent(int rowIndex, Extent extent) {
+    assert(!extent.isDynamic, 'The new extent must not be dynamic.');
+    final current = getRowExtent(rowIndex);
 
-    if (!current.isDynamic) {
-      return false;
-    }
+    if (!current.isDynamic) return;
 
-    _mutatedRowExtents[index] = newExtent;
-
-    return true;
+    _mutatedRowExtents[rowIndex] = extent;
   }
 
   @override

@@ -8,7 +8,12 @@ typedef CellWidgetBuilder = Widget Function(
   ChildVicinity vicinity,
 );
 
-mixin CellLayoutExtentDelegate on TwoDimensionalChildDelegate {
+abstract mixin class RowExtentMeasurer {
+  void updateMeasuredRowExtent(int rowIndex, Extent extent);
+}
+
+mixin CellLayoutExtentDelegate
+    on TwoDimensionalChildDelegate, RowExtentMeasurer {
   int get rowCount;
   int get columnCount;
   int get pinnedRowCount;
@@ -16,19 +21,15 @@ mixin CellLayoutExtentDelegate on TwoDimensionalChildDelegate {
 
   Extent getColumnExtent(int index);
   Extent getRowExtent(int index);
-
-  void cacheDynamicRowExtent(int index, Extent extent);
-
-  void flushCachedDynamicRowExtents();
 }
 
 typedef DynamicExtentFlusher = void Function(Map<int, Extent> changedExtents);
 
 class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
-    with CellLayoutExtentDelegate {
+    with RowExtentMeasurer, CellLayoutExtentDelegate {
   final CellExtentBuilder rowExtentBuilder;
   final CellExtentBuilder columnExtentBuilder;
-  final DynamicExtentFlusher? flushComputedRowExtents;
+  final RowExtentMeasurer rowExtentMeasurer;
 
   int _pinnedColumnCount = 0;
   int _pinnedRowCount = 0;
@@ -45,7 +46,7 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     required super.builder,
     required this.rowExtentBuilder,
     required this.columnExtentBuilder,
-    this.flushComputedRowExtents,
+    required this.rowExtentMeasurer,
   })  : assert(pinnedColumnCount >= 0),
         assert(pinnedRowCount >= 0),
         assert(rowCount >= 0),
@@ -119,22 +120,13 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
   }
 
   @override
-  void cacheDynamicRowExtent(int index, Extent extent) {
-    if (extent.isDynamic) return;
-
-    _cachedDynamicRowExtents[index] = extent;
-  }
-
-  @override
-  void flushCachedDynamicRowExtents() {
-    if (flushComputedRowExtents != null) {
-      flushComputedRowExtents!(_cachedDynamicRowExtents);
-    }
+  void updateMeasuredRowExtent(int rowIndex, Extent extent) {
+    rowExtentMeasurer.updateMeasuredRowExtent(rowIndex, extent);
   }
 }
 
 class TableGridSizedBuilderDelegate extends TwoDimensionalChildBuilderDelegate
-    with CellLayoutExtentDelegate {
+    with RowExtentMeasurer, CellLayoutExtentDelegate {
   int _pinnedColumnCount;
   int _pinnedRowCount;
   TableSizer _sizer;
@@ -221,14 +213,9 @@ class TableGridSizedBuilderDelegate extends TwoDimensionalChildBuilderDelegate
   }
 
   @override
-  void cacheDynamicRowExtent(int index, Extent extent) {
-    if (extent.isDynamic) return;
-
-    _sizer.replaceAutoRowExtent(index, extent);
+  void updateMeasuredRowExtent(int rowIndex, Extent extent) {
+    _sizer.updateMeasuredRowExtent(rowIndex, extent);
   }
-
-  @override
-  void flushCachedDynamicRowExtents() {}
 
   set sizer(TableSizer value) {
     update(sizer: value);
