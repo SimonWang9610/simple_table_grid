@@ -80,6 +80,12 @@ abstract base class TableController with ChangeNotifier {
   ///
   /// When building the cell widget, [CellDetail] would provide the hovering and selection state
   /// for the cell.
+  ///
+  /// [defaultRowExtent] can be set to [Extent.auto] to make rows whose extent is not explicitly defined in [rowExtents]
+  /// automatically measure their extent based on the content.
+  /// After automatically measured, the extent will be updated in-place for each auto-extent row.
+  ///
+  /// [defaultColumnExtent] and [columnExtents] cannot be set to [Extent.auto] because automatic measurement of column extent is not supported yet.
   factory TableController({
     required List<HeaderData> columns,
     List<ColumnKey> pinnedColumns = const [],
@@ -91,7 +97,6 @@ abstract base class TableController with ChangeNotifier {
     Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
-    bool useAutoRowExtent = false,
   }) =>
       _ControllerImpl(
         columns: columns,
@@ -104,11 +109,16 @@ abstract base class TableController with ChangeNotifier {
         columnExtents: columnExtents,
         selectionStrategies: selectionStrategies,
         hoveringStrategies: hoveringStrategies,
-        useAutoRowExtent: useAutoRowExtent,
       );
 
   /// Creates a new [TableController] with pagination support.
   /// This controller does not support pin/unpin/reorder/setHeaderVisibility operations.
+  ///
+  /// [defaultRowExtent] can be set to [Extent.auto] to make rows whose extent is not explicitly defined in [rowExtents]
+  /// automatically measure their extent based on the content.
+  /// After automatically measured, the extent will be updated in-place for each auto-extent row.
+  ///
+  /// [defaultColumnExtent] and [columnExtents] cannot be set to [Extent.auto] because automatic measurement of column extent is not supported yet.
   factory TableController.paginated({
     required int pageSize,
     required List<HeaderData> columns,
@@ -120,7 +130,6 @@ abstract base class TableController with ChangeNotifier {
     Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
-    bool useAutoRowExtent = false,
   }) =>
       _PaginatedControllerImpl(
         pageSize: pageSize,
@@ -133,7 +142,6 @@ abstract base class TableController with ChangeNotifier {
         columnExtents: columnExtents,
         selectionStrategies: selectionStrategies,
         hoveringStrategies: hoveringStrategies,
-        useAutoRowExtent: useAutoRowExtent,
       );
 }
 
@@ -191,7 +199,6 @@ final class _ControllerImpl extends TableController
     Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
-    bool useAutoRowExtent = false,
   }) : super._() {
     extent = TableExtentController(
       finder: this,
@@ -199,7 +206,6 @@ final class _ControllerImpl extends TableController
       defaultColumnExtent: defaultColumnExtent,
       rowExtents: rowExtents,
       columnExtents: columnExtents,
-      useAutoRowExtent: useAutoRowExtent,
     )..bind(this);
 
     data = TableDataController(
@@ -389,7 +395,6 @@ final class _PaginatedControllerImpl extends TableController
     Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
-    bool useAutoRowExtent = false,
   }) : super._() {
     extent = TableExtentController(
       finder: this,
@@ -397,7 +402,6 @@ final class _PaginatedControllerImpl extends TableController
       defaultColumnExtent: defaultColumnExtent,
       rowExtents: rowExtents,
       columnExtents: columnExtents,
-      useAutoRowExtent: useAutoRowExtent,
     )..bind(this);
 
     data = PaginatedTableDataController(

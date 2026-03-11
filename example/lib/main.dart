@@ -30,7 +30,20 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Infinite Scroll Example'),
+              child: const Text('Infinite Scroll Example (fixed row extent)'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InfiniteScrollExample(
+                      useAutoRowExtent: true,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Infinite Scroll Example (dynamic row extent)'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -41,7 +54,20 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Paginated Example'),
+              child: const Text('Paginated Example (fixed row extent)'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PaginatedExample(
+                      useAutoRowExtent: true,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Paginated Example (dynamic row extent)'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -52,7 +78,7 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Auto Row Extent Example'),
+              child: const Text('Dynamic Row Extent Example'),
             ),
           ],
         ),

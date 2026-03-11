@@ -6,7 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 
 class InfiniteScrollExample extends StatefulWidget {
-  const InfiniteScrollExample({super.key});
+  final bool useAutoRowExtent;
+  const InfiniteScrollExample({
+    super.key,
+    this.useAutoRowExtent = false,
+  });
 
   @override
   State<StatefulWidget> createState() => _InfiniteScrollExampleState();
@@ -95,10 +99,11 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     _tableController = TableController(
       columns: columns,
       pinnedColumns: pinnedColumns,
-      defaultRowExtent: Extent.fixed(60),
+      defaultRowExtent: widget.useAutoRowExtent
+          ? const Extent.fixed(60).auto()
+          : const Extent.fixed(60),
       defaultColumnExtent: Extent.range(pixels: 200, min: 100),
       columnExtents: columnExtents,
-      useAutoRowExtent: true,
     );
   }
 

@@ -36,7 +36,6 @@ abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
 final class TableExtentController extends TableSizer
     with TableControllerCoordinator, TableCursorDelegate {
   final TableIndexFinder finder;
-  bool _useAutoRowExtent;
 
   TableExtentController({
     required this.finder,
@@ -44,10 +43,16 @@ final class TableExtentController extends TableSizer
     required Extent defaultColumnExtent,
     Map<int, Extent>? rowExtents,
     Map<ColumnKey, Extent>? columnExtents,
-    bool useAutoRowExtent = false,
   })  : _defaultRowExtent = defaultRowExtent,
-        _defaultColumnExtent = defaultColumnExtent,
-        _useAutoRowExtent = useAutoRowExtent {
+        _defaultColumnExtent = defaultColumnExtent {
+    assert(!defaultColumnExtent.isDynamic,
+        'Default column extent cannot be dynamic.');
+
+    assert(
+        columnExtents == null ||
+            !columnExtents.values.any((extent) => extent.isDynamic),
+        "Column extents cannot be dynamic.");
+
     if (rowExtents != null) {
       _mutatedRowExtents.addAll(rowExtents);
     }
@@ -94,7 +99,7 @@ final class TableExtentController extends TableSizer
       return _mutatedRowExtents[index]!;
     }
 
-    return _useAutoRowExtent ? _defaultRowExtent.auto() : _defaultRowExtent;
+    return _defaultRowExtent;
   }
 
   @override

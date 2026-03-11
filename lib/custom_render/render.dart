@@ -7,7 +7,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/custom_render/delegate.dart';
 
-class RenderTableGridViewport extends RenderTwoDimensionalViewport {
+class RenderTableGridViewport extends RenderTwoDimensionalViewport
+    with _ViewportMetrics, _DynamicRowMeasurement, _GridBorderPainter {
   RenderTableGridViewport({
     required super.horizontalOffset,
     required super.horizontalAxisDirection,
@@ -23,7 +24,9 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
   })  : _verticalBorderSide = verticalBorderSide,
         _horizontalBorderSide = horizontalBorderSide;
 
+  @override
   BorderSide _verticalBorderSide;
+
   BorderSide get verticalBorderSide => _verticalBorderSide;
   set verticalBorderSide(BorderSide value) {
     if (_verticalBorderSide == value) {
@@ -35,9 +38,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     markNeedsPaint();
   }
 
+  @override
   BorderSide _horizontalBorderSide;
-  bool _needsMetricsRefresh = false;
-  bool _metricsRefreshScheduled = false;
   BorderSide get horizontalBorderSide => _horizontalBorderSide;
   set horizontalBorderSide(BorderSide value) {
     if (_horizontalBorderSide == value) {
@@ -50,25 +52,59 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     markNeedsPaint();
   }
 
-  double get _verticalBorderWidth =>
-      _verticalBorderSide.style == BorderStyle.none
-          ? 0.0
-          : _verticalBorderSide.width;
+  int? get _lastPinnedRow =>
+      delegate.pinnedRowCount > 0 ? delegate.pinnedRowCount - 1 : null;
+  int? get _lastPinnedColumn =>
+      delegate.pinnedColumnCount > 0 ? delegate.pinnedColumnCount - 1 : null;
 
-  double get _horizontalBorderWidth =>
-      _horizontalBorderSide.style == BorderStyle.none
-          ? 0.0
-          : _horizontalBorderSide.width;
+  double get _pinnedColumnsExtent => _lastPinnedColumn != null
+      ? _columnMetrics[_lastPinnedColumn!]!.trailingOffset
+      : 0.0;
+  double get _pinnedRowsExtent => _lastPinnedRow != null
+      ? _rowMetrics[_lastPinnedRow!]!.trailingOffset
+      : 0.0;
 
-  @override
-  CellLayoutExtentDelegate get delegate =>
-      super.delegate as CellLayoutExtentDelegate;
+  ChildVicinity? get _firstNonPinnedCell {
+    if (_rowMetrics.firstNonPinned == null ||
+        _columnMetrics.firstNonPinned == null) {
+      return null;
+    }
+
+    return ChildVicinity(
+      xIndex: _columnMetrics.firstNonPinned!,
+      yIndex: _rowMetrics.firstNonPinned!,
+    );
+  }
+
+  ChildVicinity? get _lastNonPinnedCell {
+    if (_rowMetrics.lastNonPinned == null ||
+        _columnMetrics.lastNonPinned == null) {
+      return null;
+    }
+
+    return ChildVicinity(
+      xIndex: _columnMetrics.lastNonPinned!,
+      yIndex: _rowMetrics.lastNonPinned!,
+    );
+  }
+
+  double get _targetColumnPixels {
+    return cacheExtent +
+        horizontalOffset.pixels +
+        viewportDimension.width -
+        _pinnedColumnsExtent;
+  }
+
+  double get _targetRowPixels {
+    return cacheExtent +
+        verticalOffset.pixels +
+        viewportDimension.height -
+        _pinnedRowsExtent;
+  }
 
   @override
   void layoutChildSequence() {
     _laidOutVicinities.clear();
-    print(
-        "Performing layout: needsMetricsRefresh=$_needsMetricsRefresh, needsDelegateRebuild=$needsDelegateRebuild, didResize=$didResize");
 
     if (needsDelegateRebuild || didResize || _needsMetricsRefresh) {
       _columnMetrics.clear();
@@ -184,6 +220,9 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         assert(column < _columnMetrics.length);
         final columnSpan = _columnMetrics[column]!;
         final vicinity = ChildVicinity(xIndex: column, yIndex: row);
+
+        /// Remember the laid out vicinity so that we can skip building this cell
+        /// during the measurement phase if this row is dynamic.
         _laidOutVicinities.add(vicinity);
 
         final cell = buildOrObtainChildFor(vicinity);
@@ -213,146 +252,6 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
       rowOffset += rowSpan.extent;
     }
   }
-
-  void _measureDynamicRows() {
-    if (_dynamicRows.isEmpty) return;
-
-    bool hasRowMeasured = false;
-
-    for (final row in _dynamicRows) {
-      if (row < 0 || row >= delegate.rowCount) {
-        continue;
-      }
-
-      double maxCellHeight = 0;
-
-      for (int column = 0; column < delegate.columnCount; column++) {
-        final columnSpan = _columnMetrics[column];
-
-        if (columnSpan == null) {
-          continue;
-        }
-
-        final vicinity = ChildVicinity(xIndex: column, yIndex: row);
-
-        final RenderBox? cell;
-        if (_laidOutVicinities.contains(vicinity)) {
-          cell = getChildFor(vicinity);
-        } else {
-          cell = buildOrObtainChildFor(vicinity);
-          _laidOutVicinities.add(vicinity);
-          print("=====Measuring cell at $vicinity for dynamic row $row");
-        }
-
-        if (cell == null) {
-          continue;
-        }
-
-        hasRowMeasured = true;
-
-        final cellWidth =
-            math.max(0.0, columnSpan.extent - _verticalBorderWidth);
-
-        cell.layout(
-          BoxConstraints(
-            minWidth: cellWidth,
-            maxWidth: cellWidth,
-            minHeight: 0,
-            maxHeight: double.infinity,
-          ),
-          parentUsesSize: true,
-        );
-
-        maxCellHeight = math.max(maxCellHeight, cell.size.height);
-      }
-
-      final newRowExtent = delegate
-          .getRowExtent(row)
-          .accept(maxCellHeight + _horizontalBorderWidth);
-
-      delegate.updateMeasuredRowExtent(row, newRowExtent);
-    }
-
-    _dynamicRows.clear();
-
-    if (hasRowMeasured) {
-      print("Measured dynamic rows, schedule refreshing layout");
-      _needsMetricsRefresh = true;
-      _scheduleMetricsRefresh();
-    }
-  }
-
-  void _scheduleMetricsRefresh() {
-    if (_metricsRefreshScheduled) {
-      return;
-    }
-
-    _metricsRefreshScheduled = true;
-
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      _metricsRefreshScheduled = false;
-
-      if (!attached || !_needsMetricsRefresh) {
-        return;
-      }
-
-      markNeedsLayout();
-    });
-  }
-
-  int? get _lastPinnedRow =>
-      delegate.pinnedRowCount > 0 ? delegate.pinnedRowCount - 1 : null;
-  int? get _lastPinnedColumn =>
-      delegate.pinnedColumnCount > 0 ? delegate.pinnedColumnCount - 1 : null;
-
-  double get _pinnedColumnsExtent => _lastPinnedColumn != null
-      ? _columnMetrics[_lastPinnedColumn!]!.trailingOffset
-      : 0.0;
-  double get _pinnedRowsExtent => _lastPinnedRow != null
-      ? _rowMetrics[_lastPinnedRow!]!.trailingOffset
-      : 0.0;
-
-  ChildVicinity? get _firstNonPinnedCell {
-    if (_rowMetrics.firstNonPinned == null ||
-        _columnMetrics.firstNonPinned == null) {
-      return null;
-    }
-
-    return ChildVicinity(
-      xIndex: _columnMetrics.firstNonPinned!,
-      yIndex: _rowMetrics.firstNonPinned!,
-    );
-  }
-
-  ChildVicinity? get _lastNonPinnedCell {
-    if (_rowMetrics.lastNonPinned == null ||
-        _columnMetrics.lastNonPinned == null) {
-      return null;
-    }
-
-    return ChildVicinity(
-      xIndex: _columnMetrics.lastNonPinned!,
-      yIndex: _rowMetrics.lastNonPinned!,
-    );
-  }
-
-  double get _targetColumnPixels {
-    return cacheExtent +
-        horizontalOffset.pixels +
-        viewportDimension.width -
-        _pinnedColumnsExtent;
-  }
-
-  double get _targetRowPixels {
-    return cacheExtent +
-        verticalOffset.pixels +
-        viewportDimension.height -
-        _pinnedRowsExtent;
-  }
-
-  final _columnMetrics = _Metrics();
-  final _rowMetrics = _Metrics();
-  final Set<ChildVicinity> _laidOutVicinities = <ChildVicinity>{};
 
   void _updateColumnMetrics() {
     assert(
@@ -428,8 +327,6 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
       "All pinned columns's metrics must be updated",
     );
   }
-
-  final Set<int> _dynamicRows = <int>{};
 
   void _updateRowMetrics() {
     assert(
@@ -785,6 +682,299 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     }
   }
 
+  void _paintCells({
+    required PaintingContext context,
+    required ChildVicinity start,
+    required ChildVicinity end,
+    required Offset offset,
+  }) {
+    for (int column = start.xIndex; column <= end.xIndex; column++) {
+      for (int row = start.yIndex; row <= end.yIndex; row++) {
+        final cell = getChildFor(
+          ChildVicinity(xIndex: column, yIndex: row),
+        );
+
+        if (cell != null) {
+          final data = parentDataOf(cell);
+          if (data.isVisible) {
+            context.paintChild(cell, offset + data.paintOffset!);
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    RenderBox? cell = firstChild;
+    while (cell != null) {
+      final cellParentData = parentDataOf(cell);
+      if (!cellParentData.isVisible) {
+        // This cell is not visible, so it cannot be hit.
+        cell = childAfter(cell);
+        continue;
+      }
+      final Rect cellRect = cellParentData.paintOffset! & cell.size;
+      if (cellRect.contains(position)) {
+        result.addWithPaintOffset(
+          offset: cellParentData.paintOffset,
+          position: position,
+          hitTest: (BoxHitTestResult result, Offset transformed) {
+            assert(transformed == position - cellParentData.paintOffset!);
+            return cell!.hitTest(result, position: transformed);
+          },
+        );
+        return true;
+      }
+      cell = childAfter(cell);
+    }
+    return false;
+  }
+
+  @override
+  void dispose() {
+    _clipPinnedRowsHandle.layer = null;
+    _clipPinnedColumnsHandle.layer = null;
+    _clipCellsHandle.layer = null;
+    _rowMetrics.clear();
+    _columnMetrics.clear();
+    super.dispose();
+  }
+}
+
+class _Span with Diagnosticable {
+  late double _leadingOffset;
+  late double _extent;
+  late bool _isPinned;
+
+  double get leadingOffset => _leadingOffset;
+  double get extent => _extent;
+
+  double get trailingOffset => _leadingOffset + _extent;
+
+  bool get isPinned => _isPinned;
+
+  void update({
+    required double leadingOffset,
+    required double extent,
+    required bool isPinned,
+  }) {
+    _leadingOffset = leadingOffset;
+    _extent = extent;
+    _isPinned = isPinned;
+  }
+}
+
+class _Metrics {
+  final Map<int, _Span> _metrics = {};
+
+  int? _firstNonPinned;
+  int? _lastNonPinned;
+
+  _Span? remove(int index) {
+    return _metrics.remove(index);
+  }
+
+  void set(int index, _Span span) {
+    _metrics[index] = span;
+  }
+
+  void resetRange() {
+    _firstNonPinned = null;
+    _lastNonPinned = null;
+  }
+
+  void clear() {
+    _metrics.clear();
+    resetRange();
+  }
+
+  _Span? operator [](int index) {
+    return _metrics[index];
+  }
+
+  int get length => _metrics.length;
+
+  bool get isEmpty => _metrics.isEmpty;
+
+  int? get firstNonPinned => _firstNonPinned;
+  set firstNonPinned(int? value) {
+    if (_firstNonPinned != null || value == null) {
+      return;
+    }
+
+    _firstNonPinned = value;
+  }
+
+  int? get lastNonPinned => _lastNonPinned;
+  set lastNonPinned(int? value) {
+    if (_firstNonPinned == null || _lastNonPinned != null || value == null) {
+      return;
+    }
+
+    assert(
+      value >= _firstNonPinned!,
+      "the last value must be greater than the first",
+    );
+
+    _lastNonPinned = value;
+  }
+
+  bool get isRangeEmpty => _firstNonPinned == null && _lastNonPinned == null;
+
+  double? getNonPinnedOffset(double viewportOffset, double pinnedExtent) {
+    if (_firstNonPinned == null) return null;
+
+    return viewportOffset -
+        _metrics[_firstNonPinned!]!.leadingOffset -
+        pinnedExtent;
+  }
+}
+
+mixin _ViewportMetrics on RenderTwoDimensionalViewport {
+  final _rowMetrics = _Metrics();
+  final _columnMetrics = _Metrics();
+
+  BorderSide get _verticalBorderSide;
+  BorderSide get _horizontalBorderSide;
+
+  double get _verticalBorderWidth =>
+      _verticalBorderSide.style == BorderStyle.none
+          ? 0.0
+          : _verticalBorderSide.width;
+
+  double get _horizontalBorderWidth =>
+      _horizontalBorderSide.style == BorderStyle.none
+          ? 0.0
+          : _horizontalBorderSide.width;
+
+  @override
+  CellLayoutExtentDelegate get delegate =>
+      super.delegate as CellLayoutExtentDelegate;
+
+  bool _needsMetricsRefresh = false;
+}
+
+mixin _DynamicRowMeasurement on RenderTwoDimensionalViewport, _ViewportMetrics {
+  final _dynamicRows = <int>{};
+  final _laidOutVicinities = <ChildVicinity>{};
+
+  /// Measures the dynamic rows by laying out all cells in those rows to determine the max cell height,
+  /// it is quite expensively, as it will force to schedule a new layout pass after the measurement is done,
+  /// but it is necessary to support dynamic row height.
+  void _measureDynamicRows() {
+    if (_dynamicRows.isEmpty) return;
+
+    bool hasRowMeasured = false;
+
+    for (final row in _dynamicRows) {
+      if (row < 0 || row >= delegate.rowCount) {
+        continue;
+      }
+
+      double maxCellHeight = 0;
+
+      /// we need to layout all cells in this row to determine the max cell height,
+      /// which will be used as the row extent for dynamic row.
+      for (int column = 0; column < delegate.columnCount; column++) {
+        final columnSpan = _columnMetrics[column];
+
+        if (columnSpan == null) {
+          continue;
+        }
+
+        final vicinity = ChildVicinity(xIndex: column, yIndex: row);
+
+        final RenderBox? cell;
+
+        final bool needSetupParentData;
+
+        if (_laidOutVicinities.contains(vicinity)) {
+          cell = getChildFor(vicinity);
+          needSetupParentData = false;
+        } else {
+          cell = buildOrObtainChildFor(vicinity);
+          _laidOutVicinities.add(vicinity);
+          needSetupParentData = true;
+        }
+
+        if (cell == null) {
+          continue;
+        }
+
+        hasRowMeasured = true;
+
+        final cellWidth =
+            math.max(0.0, columnSpan.extent - _verticalBorderWidth);
+
+        cell.layout(
+          BoxConstraints(
+            minWidth: cellWidth,
+            maxWidth: cellWidth,
+            minHeight: 0,
+            maxHeight: double.infinity,
+          ),
+          parentUsesSize: true,
+        );
+
+        if (needSetupParentData) {
+          final data = parentDataOf(cell);
+          final columnLeading = _columnMetrics[column]?.leadingOffset ?? 0;
+          final rowLeading = _rowMetrics[row]?.leadingOffset ?? 0;
+          data.layoutOffset = Offset(
+            columnLeading + _verticalBorderWidth,
+            rowLeading + _horizontalBorderWidth,
+          );
+        }
+
+        maxCellHeight = math.max(maxCellHeight, cell.size.height);
+      }
+
+      final oldExtent = delegate.getRowExtent(row);
+      final newExtent =
+          oldExtent.accept(maxCellHeight + _horizontalBorderWidth);
+
+      if (oldExtent != newExtent) {
+        delegate.updateMeasuredRowExtent(row, newExtent);
+      }
+    }
+
+    _dynamicRows.clear();
+
+    if (hasRowMeasured) {
+      _needsMetricsRefresh = true;
+      _scheduleMetricsRefresh();
+    }
+  }
+
+  bool _metricsRefreshScheduled = false;
+
+  void _scheduleMetricsRefresh() {
+    if (_metricsRefreshScheduled) {
+      return;
+    }
+
+    _metricsRefreshScheduled = true;
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _metricsRefreshScheduled = false;
+
+      if (!attached || !_needsMetricsRefresh) {
+        return;
+      }
+
+      markNeedsLayout();
+    });
+  }
+}
+
+mixin _GridBorderPainter on RenderTwoDimensionalViewport, _ViewportMetrics {
+  /// Paints the grid lines for the given grid region defined by the [start] and [end] vicinities, with the given offset.
+  ///
+  /// Instead of drawing each grid line separately, we batch the lines into a single draw call
+  /// for vertical and horizontal lines respectively, to improve the performance when there are many lines to draw.
+  ///
+  /// If the border width is zero, the corresponding grid lines will not be painted.
   void _paintGrid({
     required PaintingContext context,
     required ChildVicinity start,
@@ -936,153 +1126,5 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     }
 
     return null;
-  }
-
-  void _paintCells({
-    required PaintingContext context,
-    required ChildVicinity start,
-    required ChildVicinity end,
-    required Offset offset,
-  }) {
-    for (int column = start.xIndex; column <= end.xIndex; column++) {
-      for (int row = start.yIndex; row <= end.yIndex; row++) {
-        final cell = getChildFor(
-          ChildVicinity(xIndex: column, yIndex: row),
-        );
-
-        if (cell != null) {
-          final data = parentDataOf(cell);
-          if (data.isVisible) {
-            context.paintChild(cell, offset + data.paintOffset!);
-          }
-        }
-      }
-    }
-  }
-
-  @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    RenderBox? cell = firstChild;
-    while (cell != null) {
-      final cellParentData = parentDataOf(cell);
-      if (!cellParentData.isVisible) {
-        // This cell is not visible, so it cannot be hit.
-        cell = childAfter(cell);
-        continue;
-      }
-      final Rect cellRect = cellParentData.paintOffset! & cell.size;
-      if (cellRect.contains(position)) {
-        result.addWithPaintOffset(
-          offset: cellParentData.paintOffset,
-          position: position,
-          hitTest: (BoxHitTestResult result, Offset transformed) {
-            assert(transformed == position - cellParentData.paintOffset!);
-            return cell!.hitTest(result, position: transformed);
-          },
-        );
-        return true;
-      }
-      cell = childAfter(cell);
-    }
-    return false;
-  }
-
-  @override
-  void dispose() {
-    _clipPinnedRowsHandle.layer = null;
-    _clipPinnedColumnsHandle.layer = null;
-    _clipCellsHandle.layer = null;
-    _rowMetrics.clear();
-    _columnMetrics.clear();
-    super.dispose();
-  }
-}
-
-class _Span with Diagnosticable {
-  late double _leadingOffset;
-  late double _extent;
-  late bool _isPinned;
-
-  double get leadingOffset => _leadingOffset;
-  double get extent => _extent;
-
-  double get trailingOffset => _leadingOffset + _extent;
-
-  bool get isPinned => _isPinned;
-
-  void update({
-    required double leadingOffset,
-    required double extent,
-    required bool isPinned,
-  }) {
-    _leadingOffset = leadingOffset;
-    _extent = extent;
-    _isPinned = isPinned;
-  }
-}
-
-class _Metrics {
-  final Map<int, _Span> _metrics = {};
-
-  int? _firstNonPinned;
-  int? _lastNonPinned;
-
-  _Span? remove(int index) {
-    return _metrics.remove(index);
-  }
-
-  void set(int index, _Span span) {
-    _metrics[index] = span;
-  }
-
-  void resetRange() {
-    _firstNonPinned = null;
-    _lastNonPinned = null;
-  }
-
-  void clear() {
-    _metrics.clear();
-    resetRange();
-  }
-
-  _Span? operator [](int index) {
-    return _metrics[index];
-  }
-
-  int get length => _metrics.length;
-
-  bool get isEmpty => _metrics.isEmpty;
-
-  int? get firstNonPinned => _firstNonPinned;
-  set firstNonPinned(int? value) {
-    if (_firstNonPinned != null || value == null) {
-      return;
-    }
-
-    _firstNonPinned = value;
-  }
-
-  int? get lastNonPinned => _lastNonPinned;
-  set lastNonPinned(int? value) {
-    if (_firstNonPinned == null || _lastNonPinned != null || value == null) {
-      return;
-    }
-
-    assert(
-      value >= _firstNonPinned!,
-      "the last value must be greater than the first",
-    );
-
-    _lastNonPinned = value;
-  }
-
-  bool get isRangeEmpty => _firstNonPinned == null && _lastNonPinned == null;
-
-  double? getNonPinnedOffset(double viewportOffset, double pinnedExtent) {
-    if (_firstNonPinned == null) return null;
-
-    return viewportOffset -
-        _metrics[_firstNonPinned!]!.leadingOffset -
-        pinnedExtent;
   }
 }

@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:equatable/equatable.dart';
+
 /// A class representing the extent of a row or column in a table grid.
 /// Only [Extent.range] supports resizing.
 /// Other extents are fixed and do not change during resizing.
-sealed class Extent {
+sealed class Extent extends Equatable {
   const Extent();
 
   const factory Extent.fixed(double pixels) = _FixedExtent;
@@ -60,6 +62,9 @@ final class _FixedExtent extends Extent {
 
   @override
   Extent accept(double delta) => this;
+
+  @override
+  List<Object?> get props => [pixels];
 }
 
 final class _RangeExtent extends Extent {
@@ -117,9 +122,14 @@ final class _RangeExtent extends Extent {
       return this; // No change if outside the range
     }
   }
+
+  @override
+  List<Object?> get props => [min, max, pixels];
 }
 
 final class _AutoExtent extends Extent {
+  // we must give a fixed/ranged extent as reference to layout in the first layout phase,
+  // otherwise we don't know how to compute the row metrics before starting layout
   final Extent reference;
 
   const _AutoExtent(this.reference)
@@ -149,4 +159,7 @@ final class _AutoExtent extends Extent {
   Extent accept(double delta) {
     return Extent.fixed(delta);
   }
+
+  @override
+  List<Object?> get props => [reference];
 }
