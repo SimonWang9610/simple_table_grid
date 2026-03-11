@@ -3,6 +3,9 @@ import 'package:simple_table_grid/custom_render/delegate.dart';
 import 'package:simple_table_grid/custom_render/render.dart';
 
 class TableGridViewport extends TwoDimensionalViewport {
+  final BorderSide verticalBorderSide;
+  final BorderSide horizontalBorderSide;
+
   const TableGridViewport({
     super.key,
     required super.verticalOffset,
@@ -13,6 +16,8 @@ class TableGridViewport extends TwoDimensionalViewport {
     required super.mainAxis,
     super.cacheExtent,
     super.clipBehavior,
+    this.verticalBorderSide = BorderSide.none,
+    this.horizontalBorderSide = BorderSide.none,
   });
 
   @override
@@ -26,6 +31,8 @@ class TableGridViewport extends TwoDimensionalViewport {
       mainAxis: mainAxis,
       cacheExtent: cacheExtent,
       clipBehavior: clipBehavior,
+      verticalBorderSide: verticalBorderSide,
+      horizontalBorderSide: horizontalBorderSide,
       childManager: context as TwoDimensionalChildManager,
     );
   }
@@ -43,6 +50,8 @@ class TableGridViewport extends TwoDimensionalViewport {
       ..delegate = delegate as CellLayoutExtentDelegate
       ..mainAxis = mainAxis
       ..cacheExtent = cacheExtent
-      ..clipBehavior = clipBehavior;
+      ..clipBehavior = clipBehavior
+      ..verticalBorderSide = verticalBorderSide
+      ..horizontalBorderSide = horizontalBorderSide;
   }
 }

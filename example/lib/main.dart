@@ -1,3 +1,4 @@
+import 'package:example/examples/auto_row_extent_example.dart';
 import 'package:example/examples/infinite_scroll_example.dart';
 import 'package:example/examples/paginated_example.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +30,20 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Infinite Scroll Example'),
+              child: const Text('Infinite Scroll Example (fixed row extent)'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InfiniteScrollExample(
+                      useAutoRowExtent: true,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Infinite Scroll Example (dynamic row extent)'),
             ),
             ElevatedButton(
               onPressed: () {
@@ -40,8 +54,32 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Paginated Example'),
-            )
+              child: const Text('Paginated Example (fixed row extent)'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PaginatedExample(
+                      useAutoRowExtent: true,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Paginated Example (dynamic row extent)'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AutoRowExtentExample(),
+                  ),
+                );
+              },
+              child: const Text('Dynamic Row Extent Example'),
+            ),
           ],
         ),
       ),

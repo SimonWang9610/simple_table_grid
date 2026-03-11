@@ -6,7 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:simple_table_grid/simple_table_grid.dart';
 
 class PaginatedExample extends StatefulWidget {
-  const PaginatedExample({super.key});
+  final bool useAutoRowExtent;
+  const PaginatedExample({
+    super.key,
+    this.useAutoRowExtent = false,
+  });
 
   @override
   State<StatefulWidget> createState() => _PaginatedExampleState();
@@ -98,7 +102,9 @@ class _PaginatedExampleState extends State<PaginatedExample> {
       pageSize: _pageSize.value,
       columns: columns,
       pinnedColumns: pinnedColumns,
-      defaultRowExtent: Extent.fixed(60),
+      defaultRowExtent: widget.useAutoRowExtent
+          ? const Extent.fixed(60).auto()
+          : const Extent.fixed(60),
       defaultColumnExtent: Extent.range(pixels: 200, min: 100),
       columnExtents: columnExtents,
     );

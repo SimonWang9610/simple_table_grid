@@ -109,18 +109,6 @@ class _CellDetailWidgetState<T extends CellDetail, K extends TableKey>
         widget.reorderMixin?.reorderPredicate?.isReorderTarget(widget.detail) ??
             false;
 
-    final padding = gridTheme.calculatePadding(
-      widget.isRightEdge,
-      widget.isBottomEdge,
-      isReorderTarget,
-    );
-
-    final border = gridTheme.calculateBorder(
-      widget.isRightEdge,
-      widget.isBottomEdge,
-      isReorderTarget,
-    );
-
     final cellTheme = switch (widget.detail) {
       TableHeaderDetail() => gridTheme.headerTheme,
       TableCellDetail() => gridTheme.cellTheme,
@@ -152,16 +140,8 @@ class _CellDetailWidgetState<T extends CellDetail, K extends TableKey>
       );
     }
 
-    if (padding != null) {
-      child = Padding(
-        padding: padding,
-        child: child,
-      );
-    }
-
     child = DecoratedBox(
       decoration: BoxDecoration(
-        border: border,
         color: isReorderTarget
             ? cellTheme.reorderTargetColor
             : widget.detail.selected

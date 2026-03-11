@@ -88,6 +88,9 @@ class _TableGridState extends State<TableGrid> {
             physics:
                 widget.verticalScrollPhysics ?? const ClampingScrollPhysics(),
           ),
+          verticalBorderSide: widget.theme.border?.vertical ?? BorderSide.none,
+          horizontalBorderSide:
+              widget.theme.border?.horizontal ?? BorderSide.none,
           controller: widget.controller,
           builder: _delegateBuilder,
         );

@@ -8,7 +8,12 @@ typedef CellWidgetBuilder = Widget Function(
   ChildVicinity vicinity,
 );
 
-mixin CellLayoutExtentDelegate on TwoDimensionalChildDelegate {
+abstract mixin class RowExtentMeasurer {
+  void updateMeasuredRowExtent(int rowIndex, Extent extent);
+}
+
+mixin CellLayoutExtentDelegate
+    on TwoDimensionalChildDelegate, RowExtentMeasurer {
   int get rowCount;
   int get columnCount;
   int get pinnedRowCount;
@@ -18,10 +23,13 @@ mixin CellLayoutExtentDelegate on TwoDimensionalChildDelegate {
   Extent getRowExtent(int index);
 }
 
+typedef DynamicExtentFlusher = void Function(Map<int, Extent> changedExtents);
+
 class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
-    with CellLayoutExtentDelegate {
+    with RowExtentMeasurer, CellLayoutExtentDelegate {
   final CellExtentBuilder rowExtentBuilder;
   final CellExtentBuilder columnExtentBuilder;
+  final RowExtentMeasurer rowExtentMeasurer;
 
   int _pinnedColumnCount = 0;
   int _pinnedRowCount = 0;
@@ -36,6 +44,7 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     required super.builder,
     required this.rowExtentBuilder,
     required this.columnExtentBuilder,
+    required this.rowExtentMeasurer,
   })  : assert(pinnedColumnCount >= 0),
         assert(pinnedRowCount >= 0),
         assert(rowCount >= 0),
@@ -106,10 +115,15 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
 
     return rowExtentBuilder(index);
   }
+
+  @override
+  void updateMeasuredRowExtent(int rowIndex, Extent extent) {
+    rowExtentMeasurer.updateMeasuredRowExtent(rowIndex, extent);
+  }
 }
 
 class TableGridSizedBuilderDelegate extends TwoDimensionalChildBuilderDelegate
-    with CellLayoutExtentDelegate {
+    with RowExtentMeasurer, CellLayoutExtentDelegate {
   int _pinnedColumnCount;
   int _pinnedRowCount;
   TableSizer _sizer;
@@ -193,6 +207,11 @@ class TableGridSizedBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     assert(index < rowCount);
 
     return _sizer.getRowExtent(index);
+  }
+
+  @override
+  void updateMeasuredRowExtent(int rowIndex, Extent extent) {
+    _sizer.updateMeasuredRowExtent(rowIndex, extent);
   }
 
   set sizer(TableSizer value) {

@@ -1,9 +1,10 @@
 import 'package:flutter/widgets.dart';
+import 'package:simple_table_grid/custom_render/delegate.dart';
 import 'package:simple_table_grid/simple_table_grid.dart' hide TableIndexFinder;
 import 'package:simple_table_grid/src/controllers/base.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 
-abstract base class TableSizer with ChangeNotifier {
+abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
   /// set the extent at the given [index] for the row.
   void setRowExtent(int index, Extent extent);
 
@@ -44,6 +45,14 @@ final class TableExtentController extends TableSizer
     Map<ColumnKey, Extent>? columnExtents,
   })  : _defaultRowExtent = defaultRowExtent,
         _defaultColumnExtent = defaultColumnExtent {
+    assert(!defaultColumnExtent.isDynamic,
+        'Default column extent cannot be dynamic.');
+
+    assert(
+        columnExtents == null ||
+            !columnExtents.values.any((extent) => extent.isDynamic),
+        "Column extents cannot be dynamic.");
+
     if (rowExtents != null) {
       _mutatedRowExtents.addAll(rowExtents);
     }
@@ -114,6 +123,19 @@ final class TableExtentController extends TableSizer
 
     _mutatedRowExtents[index] = extent;
     notify();
+  }
+
+  /// Purposely do not notify listeners in this method.
+  /// Typically, this method is called during the measurement phase in the render object,
+  /// and notifying listeners during that phase may cause unwanted side effects and assertions in the render object.
+  @override
+  void updateMeasuredRowExtent(int rowIndex, Extent extent) {
+    assert(!extent.isDynamic, 'The new extent must not be dynamic.');
+    final current = getRowExtent(rowIndex);
+
+    if (!current.isDynamic) return;
+
+    _mutatedRowExtents[rowIndex] = extent;
   }
 
   @override
