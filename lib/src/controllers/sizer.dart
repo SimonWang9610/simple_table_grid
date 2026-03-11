@@ -30,11 +30,14 @@ abstract base class TableSizer with ChangeNotifier {
 
   /// Set the [ResizeTarget] to [resize] on the targeted column or row.
   void setResizeTarget(ResizeTarget? target);
+
+  bool replaceAutoRowExtent(int index, Extent newExtent);
 }
 
 final class TableExtentController extends TableSizer
     with TableControllerCoordinator, TableCursorDelegate {
   final TableIndexFinder finder;
+  bool _useAutoRowExtent;
 
   TableExtentController({
     required this.finder,
@@ -42,8 +45,10 @@ final class TableExtentController extends TableSizer
     required Extent defaultColumnExtent,
     Map<int, Extent>? rowExtents,
     Map<ColumnKey, Extent>? columnExtents,
+    bool useAutoRowExtent = false,
   })  : _defaultRowExtent = defaultRowExtent,
-        _defaultColumnExtent = defaultColumnExtent {
+        _defaultColumnExtent = defaultColumnExtent,
+        _useAutoRowExtent = useAutoRowExtent {
     if (rowExtents != null) {
       _mutatedRowExtents.addAll(rowExtents);
     }
@@ -90,7 +95,7 @@ final class TableExtentController extends TableSizer
       return _mutatedRowExtents[index]!;
     }
 
-    return _defaultRowExtent;
+    return _useAutoRowExtent ? _defaultRowExtent.auto() : _defaultRowExtent;
   }
 
   @override
@@ -114,6 +119,20 @@ final class TableExtentController extends TableSizer
 
     _mutatedRowExtents[index] = extent;
     notify();
+  }
+
+  @override
+  bool replaceAutoRowExtent(int index, Extent newExtent) {
+    assert(!newExtent.isDynamic, 'The new extent must not be dynamic.');
+    final current = getRowExtent(index);
+
+    if (!current.isDynamic) {
+      return false;
+    }
+
+    _mutatedRowExtents[index] = newExtent;
+
+    return true;
   }
 
   @override

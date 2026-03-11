@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/custom_render/delegate.dart';
@@ -35,6 +36,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
   }
 
   BorderSide _horizontalBorderSide;
+  bool _needsMetricsRefresh = false;
+  bool _metricsRefreshScheduled = false;
   BorderSide get horizontalBorderSide => _horizontalBorderSide;
   set horizontalBorderSide(BorderSide value) {
     if (_horizontalBorderSide == value) {
@@ -42,6 +45,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     }
 
     _horizontalBorderSide = value;
+    _needsMetricsRefresh = true;
     markNeedsLayout();
     markNeedsPaint();
   }
@@ -62,12 +66,15 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
 
   @override
   void layoutChildSequence() {
-    if (needsDelegateRebuild || didResize) {
+    _laidOutVicinities.clear();
+
+    if (needsDelegateRebuild || didResize || _needsMetricsRefresh) {
       _columnMetrics.clear();
       _rowMetrics.clear();
       _updateColumnMetrics();
       _updateRowMetrics();
       _updateScrollBounds();
+      _needsMetricsRefresh = false;
     } else {
       _updateFirstAndLastVisibleCell();
     }
@@ -154,6 +161,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
         offset: Offset(offsetIntoColumn!, offsetIntoRow!),
       );
     }
+
+    _measureAndCacheDynamicRows();
   }
 
   void _layoutCells({
@@ -172,10 +181,10 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
       for (int column = start.xIndex; column <= end.xIndex; column++) {
         assert(column < _columnMetrics.length);
         final columnSpan = _columnMetrics[column]!;
+        final vicinity = ChildVicinity(xIndex: column, yIndex: row);
+        _laidOutVicinities.add(vicinity);
 
-        final cell = buildOrObtainChildFor(
-          ChildVicinity(xIndex: column, yIndex: row),
-        );
+        final cell = buildOrObtainChildFor(vicinity);
 
         if (cell != null) {
           final data = parentDataOf(cell);
@@ -201,6 +210,88 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
       }
       rowOffset += rowSpan.extent;
     }
+  }
+
+  void _measureAndCacheDynamicRows() {
+    if (_dynamicRows.isEmpty) {
+      return;
+    }
+
+    for (final row in _dynamicRows) {
+      if (row < 0 || row >= delegate.rowCount) {
+        continue;
+      }
+
+      double maxCellHeight = 0;
+
+      for (int column = 0; column < delegate.columnCount; column++) {
+        final columnSpan = _columnMetrics[column];
+
+        if (columnSpan == null) {
+          continue;
+        }
+
+        final vicinity = ChildVicinity(xIndex: column, yIndex: row);
+
+        final RenderBox? cell;
+        if (_laidOutVicinities.contains(vicinity)) {
+          cell = getChildFor(vicinity);
+        } else {
+          cell = buildOrObtainChildFor(vicinity);
+          _laidOutVicinities.add(vicinity);
+        }
+
+        if (cell == null) {
+          continue;
+        }
+
+        final cellWidth =
+            math.max(0.0, columnSpan.extent - _verticalBorderWidth);
+
+        cell.layout(
+          BoxConstraints(
+            minWidth: cellWidth,
+            maxWidth: cellWidth,
+            minHeight: 0,
+            maxHeight: double.infinity,
+          ),
+          parentUsesSize: true,
+        );
+
+        maxCellHeight = math.max(maxCellHeight, cell.size.height);
+      }
+
+      final newRowExtent = delegate
+          .getRowExtent(row)
+          .accept(maxCellHeight + _horizontalBorderWidth);
+
+      delegate.cacheDynamicRowExtent(row, newRowExtent);
+    }
+
+    if (_dynamicRows.isNotEmpty) {
+      _needsMetricsRefresh = true;
+      _dynamicRows.clear();
+      delegate.flushCachedDynamicRowExtents();
+      _scheduleMetricsRefresh();
+    }
+  }
+
+  void _scheduleMetricsRefresh() {
+    if (_metricsRefreshScheduled) {
+      return;
+    }
+
+    _metricsRefreshScheduled = true;
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _metricsRefreshScheduled = false;
+
+      if (!attached || !_needsMetricsRefresh) {
+        return;
+      }
+
+      markNeedsLayout();
+    });
   }
 
   int? get _lastPinnedRow =>
@@ -255,6 +346,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
 
   final _columnMetrics = _Metrics();
   final _rowMetrics = _Metrics();
+  final Set<ChildVicinity> _laidOutVicinities = <ChildVicinity>{};
 
   void _updateColumnMetrics() {
     assert(
@@ -331,6 +423,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     );
   }
 
+  final Set<int> _dynamicRows = <int>{};
+
   void _updateRowMetrics() {
     assert(
       _rowMetrics.isRangeEmpty,
@@ -347,6 +441,10 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport {
     _Span updateSpan(int row, bool isPinned, double leadingOffset) {
       final span = _rowMetrics.remove(row) ?? _Span();
       final vExtent = delegate.getRowExtent(row);
+
+      if (vExtent.isDynamic) {
+        _dynamicRows.add(row);
+      }
 
       span.update(
         leadingOffset: leadingOffset,

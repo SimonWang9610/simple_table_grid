@@ -91,6 +91,7 @@ abstract base class TableController with ChangeNotifier {
     Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
+    bool useAutoRowExtent = false,
   }) =>
       _ControllerImpl(
         columns: columns,
@@ -103,6 +104,7 @@ abstract base class TableController with ChangeNotifier {
         columnExtents: columnExtents,
         selectionStrategies: selectionStrategies,
         hoveringStrategies: hoveringStrategies,
+        useAutoRowExtent: useAutoRowExtent,
       );
 
   /// Creates a new [TableController] with pagination support.
@@ -118,6 +120,7 @@ abstract base class TableController with ChangeNotifier {
     Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
+    bool useAutoRowExtent = false,
   }) =>
       _PaginatedControllerImpl(
         pageSize: pageSize,
@@ -130,6 +133,7 @@ abstract base class TableController with ChangeNotifier {
         columnExtents: columnExtents,
         selectionStrategies: selectionStrategies,
         hoveringStrategies: hoveringStrategies,
+        useAutoRowExtent: useAutoRowExtent,
       );
 }
 
@@ -187,6 +191,7 @@ final class _ControllerImpl extends TableController
     Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
+    bool useAutoRowExtent = false,
   }) : super._() {
     extent = TableExtentController(
       finder: this,
@@ -194,6 +199,7 @@ final class _ControllerImpl extends TableController
       defaultColumnExtent: defaultColumnExtent,
       rowExtents: rowExtents,
       columnExtents: columnExtents,
+      useAutoRowExtent: useAutoRowExtent,
     )..bind(this);
 
     data = TableDataController(
@@ -383,6 +389,7 @@ final class _PaginatedControllerImpl extends TableController
     Map<ColumnKey, Extent>? columnExtents,
     List<FocusStrategy> selectionStrategies = const [FocusStrategy.row],
     List<FocusStrategy> hoveringStrategies = const [FocusStrategy.row],
+    bool useAutoRowExtent = false,
   }) : super._() {
     extent = TableExtentController(
       finder: this,
@@ -390,6 +397,7 @@ final class _PaginatedControllerImpl extends TableController
       defaultColumnExtent: defaultColumnExtent,
       rowExtents: rowExtents,
       columnExtents: columnExtents,
+      useAutoRowExtent: useAutoRowExtent,
     )..bind(this);
 
     data = PaginatedTableDataController(

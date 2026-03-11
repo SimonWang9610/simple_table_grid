@@ -16,15 +16,24 @@ mixin CellLayoutExtentDelegate on TwoDimensionalChildDelegate {
 
   Extent getColumnExtent(int index);
   Extent getRowExtent(int index);
+
+  void cacheDynamicRowExtent(int index, Extent extent);
+
+  void flushCachedDynamicRowExtents();
 }
+
+typedef DynamicExtentFlusher = void Function(Map<int, Extent> changedExtents);
 
 class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     with CellLayoutExtentDelegate {
   final CellExtentBuilder rowExtentBuilder;
   final CellExtentBuilder columnExtentBuilder;
+  final DynamicExtentFlusher? flushComputedRowExtents;
 
   int _pinnedColumnCount = 0;
   int _pinnedRowCount = 0;
+
+  final Map<int, Extent> _cachedDynamicRowExtents = {};
 
   TableGridCellBuilderDelegate({
     required int columnCount,
@@ -36,6 +45,7 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     required super.builder,
     required this.rowExtentBuilder,
     required this.columnExtentBuilder,
+    this.flushComputedRowExtents,
   })  : assert(pinnedColumnCount >= 0),
         assert(pinnedRowCount >= 0),
         assert(rowCount >= 0),
@@ -87,6 +97,7 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
   set rowCount(int value) {
     assert(value >= 0);
     assert(value >= pinnedRowCount);
+    _cachedDynamicRowExtents.removeWhere((key, _) => key >= value);
     maxYIndex = value - 1;
   }
 
@@ -105,6 +116,20 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     assert(index < rowCount);
 
     return rowExtentBuilder(index);
+  }
+
+  @override
+  void cacheDynamicRowExtent(int index, Extent extent) {
+    if (extent.isDynamic) return;
+
+    _cachedDynamicRowExtents[index] = extent;
+  }
+
+  @override
+  void flushCachedDynamicRowExtents() {
+    if (flushComputedRowExtents != null) {
+      flushComputedRowExtents!(_cachedDynamicRowExtents);
+    }
   }
 }
 
@@ -194,6 +219,16 @@ class TableGridSizedBuilderDelegate extends TwoDimensionalChildBuilderDelegate
 
     return _sizer.getRowExtent(index);
   }
+
+  @override
+  void cacheDynamicRowExtent(int index, Extent extent) {
+    if (extent.isDynamic) return;
+
+    _sizer.replaceAutoRowExtent(index, extent);
+  }
+
+  @override
+  void flushCachedDynamicRowExtents() {}
 
   set sizer(TableSizer value) {
     update(sizer: value);

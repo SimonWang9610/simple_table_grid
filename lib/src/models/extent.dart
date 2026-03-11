@@ -21,7 +21,11 @@ sealed class Extent {
 
   double get currentPixels;
 
+  bool get isDynamic => false;
+
   Extent accept(double delta);
+
+  Extent auto() => _AutoExtent(this);
 }
 
 final class _FixedExtent extends Extent {
@@ -104,5 +108,37 @@ final class _RangeExtent extends Extent {
     } else {
       return this; // No change if outside the range
     }
+  }
+}
+
+final class _AutoExtent extends Extent {
+  final Extent reference;
+
+  const _AutoExtent(this.reference)
+      : assert(
+            reference is! _AutoExtent, 'Nested auto extents are not allowed');
+
+  @override
+  double get currentPixels => reference.currentPixels;
+
+  @override
+  bool get isDynamic => true;
+
+  @override
+  double calculate(
+    double viewportExtent, {
+    required double remainingSpace,
+    bool pinned = false,
+  }) {
+    return reference.calculate(
+      viewportExtent,
+      remainingSpace: remainingSpace,
+      pinned: pinned,
+    );
+  }
+
+  @override
+  Extent accept(double delta) {
+    return Extent.fixed(delta);
   }
 }

@@ -91,6 +91,11 @@ class TableGridView extends TwoDimensionalScrollView {
             pinnedRowCount: controller.rows.pinnedCount,
             rowExtentBuilder: controller.sizer.getRowExtent,
             columnExtentBuilder: controller.sizer.getColumnExtent,
+            flushComputedRowExtents: (extents) {
+              for (final entry in extents.entries) {
+                controller.sizer.replaceAutoRowExtent(entry.key, entry.value);
+              }
+            },
           ),
         );
 
