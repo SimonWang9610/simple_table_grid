@@ -4,6 +4,8 @@ import 'package:simple_table_grid/simple_table_grid.dart' hide TableIndexFinder;
 import 'package:simple_table_grid/src/controllers/base.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 
+/// TODO: evict all measurements when columns increase (the new columns may affect the layout of all rows and cause all measured row extents invalid).
+/// TODO: evict some measurements when rows change
 abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
   /// set the extent at the given [index] for the row.
   void setRowExtent(int index, Extent extent);
@@ -22,6 +24,11 @@ abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
 
   /// get the extents for the columns with the given [key].
   Map<ColumnKey, Extent> get columnExtents;
+
+  /// evict the measured row extent for the row with the given [rowKey] from the cache.
+  void evictMeasuredRow(RowKey? rowKey);
+
+  void evictAllMeasuredRows();
 
   /// Resize the [ResizeTarget] set by [setResizeTarget] by the given [delta].
   ///
@@ -81,6 +88,7 @@ final class TableExtentController extends TableSizer
 
   final Map<int, Extent> _mutatedRowExtents = {};
   final Map<ColumnKey, Extent> _mutatedColumnExtents = {};
+  final _measuredRowExtents = _RowExtentMeasurement();
 
   Extent get defaultRowExtent => _defaultRowExtent;
   Extent get defaultColumnExtent => _defaultColumnExtent;
@@ -95,11 +103,22 @@ final class TableExtentController extends TableSizer
 
   @override
   Extent getRowExtent(int index) {
-    if (_mutatedRowExtents.containsKey(index)) {
-      return _mutatedRowExtents[index]!;
+    final extent = _mutatedRowExtents[index] ?? _defaultRowExtent;
+
+    /// only when the extent is dynamic, the measured extent can be used,
+    /// otherwise the measured extent is meaningless and should not be used.
+    if (extent.isDynamic) {
+      final rowKey = finder.getRowKey(index);
+      final measured = _measuredRowExtents.get(rowKey);
+
+      if (measured != null) return measured;
     }
 
-    return _defaultRowExtent;
+    /// if no measured extent is available for dynamic extent,
+    /// or the extent is not dynamic,
+    /// it will be measured in the next layout pass if dynamic
+
+    return extent;
   }
 
   @override
@@ -121,6 +140,12 @@ final class TableExtentController extends TableSizer
   void setRowExtent(int index, Extent extent) {
     if (_mutatedRowExtents[index] == extent) return;
 
+    /// the extent should be updated, previously measured extent for this row may be invalid now,
+    /// so evict it from the cache.
+    /// otherwise the old measured extent may still be used and cause unexpected layout result.
+    final rowKey = finder.getRowKey(index);
+    _measuredRowExtents.evict(rowKey);
+
     _mutatedRowExtents[index] = extent;
     notify();
   }
@@ -131,11 +156,22 @@ final class TableExtentController extends TableSizer
   @override
   void updateMeasuredRowExtent(int rowIndex, Extent extent) {
     assert(!extent.isDynamic, 'The new extent must not be dynamic.');
-    final current = getRowExtent(rowIndex);
 
-    if (!current.isDynamic) return;
+    /// typically, the measured extent is only for the current row,
+    /// so we cache it with the row key, which is more stable than the row index,
+    /// as pin/unpin/sorting/replacing may also change the row index of the row key.
+    final rowKey = finder.getRowKey(rowIndex);
+    _measuredRowExtents.update(rowKey, extent);
+  }
 
-    _mutatedRowExtents[rowIndex] = extent;
+  @override
+  void evictMeasuredRow(RowKey? rowKey) {
+    _measuredRowExtents.evict(rowKey);
+  }
+
+  @override
+  void evictAllMeasuredRows() {
+    _measuredRowExtents.evictAll();
   }
 
   @override
@@ -204,8 +240,46 @@ final class TableExtentController extends TableSizer
   @override
   void dispose() {
     _target = null;
+    _measuredRowExtents.evictAll();
     _mutatedRowExtents.clear();
     _mutatedColumnExtents.clear();
     super.dispose();
+  }
+}
+
+class _RowExtentMeasurement {
+  final Map<RowKey, Extent> _measuredRowExtents = {};
+
+  Extent? _measureHeaderRowExtent;
+
+  void update(RowKey? rowKey, Extent extent) {
+    assert(!extent.isDynamic, 'Measured extent cannot be dynamic.');
+
+    if (rowKey == null) {
+      _measureHeaderRowExtent = extent;
+    } else {
+      _measuredRowExtents[rowKey] = extent;
+    }
+  }
+
+  Extent? get(RowKey? rowKey) {
+    if (rowKey == null) {
+      return _measureHeaderRowExtent;
+    }
+
+    return _measuredRowExtents[rowKey];
+  }
+
+  void evict(RowKey? rowKey) {
+    if (rowKey == null) {
+      _measureHeaderRowExtent = null;
+    } else {
+      _measuredRowExtents.remove(rowKey);
+    }
+  }
+
+  void evictAll() {
+    _measuredRowExtents.clear();
+    _measureHeaderRowExtent = null;
   }
 }

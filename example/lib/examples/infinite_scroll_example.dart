@@ -104,6 +104,11 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
           : const Extent.fixed(60),
       defaultColumnExtent: Extent.range(pixels: 200, min: 100),
       columnExtents: columnExtents,
+      rowExtents: {
+        /// the 3rd data row will always have a fixed extent of 40,
+        /// it take highest priority than other extents
+        3: const Extent.fixed(40),
+      },
     );
   }
 

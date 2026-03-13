@@ -186,6 +186,7 @@ abstract interface class TableIndexFinder {
 }
 
 final class _ControllerImpl extends TableController
+    with DefaultFinderImplMixin
     implements TableInternalController, TableIndexFinder {
   late final TableDataController data;
   late final TableHeaderController header;
@@ -296,46 +297,6 @@ final class _ControllerImpl extends TableController
     ) as T;
   }
 
-  @override
-  int getRowIndex(RowKey key) {
-    return data.getRowIndex(key);
-  }
-
-  @override
-  RowKey? getRowKey(int index) {
-    return data.getRowKey(index);
-  }
-
-  @override
-  RowKey? previousRow(RowKey key) {
-    return data.previous(key);
-  }
-
-  @override
-  RowKey? nextRow(RowKey key) {
-    return data.next(key);
-  }
-
-  @override
-  int? getColumnIndex(ColumnKey key) {
-    return header.getColumnIndex(key);
-  }
-
-  @override
-  ColumnKey getColumnKey(int index) {
-    return header.getColumnKey(index);
-  }
-
-  @override
-  ColumnKey? previousColumn(ColumnKey key) {
-    return header.previous(key);
-  }
-
-  @override
-  ColumnKey? nextColumn(ColumnKey key) {
-    return header.next(key);
-  }
-
   bool isColumnPinned(int vicinityColumn) {
     return vicinityColumn < header.pinnedCount;
   }
@@ -383,6 +344,7 @@ final class _ControllerImpl extends TableController
 }
 
 final class _PaginatedControllerImpl extends TableController
+    with DefaultFinderImplMixin
     implements TableInternalController, TableIndexFinder {
   late final PaginatedTableDataController data;
   late final TableHeaderController header;
@@ -495,46 +457,6 @@ final class _PaginatedControllerImpl extends TableController
     ) as T;
   }
 
-  @override
-  int getRowIndex(RowKey key) {
-    return data.getRowIndex(key);
-  }
-
-  @override
-  RowKey? getRowKey(int index) {
-    return data.getRowKey(index);
-  }
-
-  @override
-  RowKey? previousRow(RowKey key) {
-    return data.previous(key);
-  }
-
-  @override
-  RowKey? nextRow(RowKey key) {
-    return data.next(key);
-  }
-
-  @override
-  int? getColumnIndex(ColumnKey key) {
-    return header.getColumnIndex(key);
-  }
-
-  @override
-  ColumnKey getColumnKey(int index) {
-    return header.getColumnKey(index);
-  }
-
-  @override
-  ColumnKey? previousColumn(ColumnKey key) {
-    return header.previous(key);
-  }
-
-  @override
-  ColumnKey? nextColumn(ColumnKey key) {
-    return header.next(key);
-  }
-
   bool isColumnPinned(int vicinityColumn) {
     return vicinityColumn < header.pinnedCount;
   }
@@ -575,5 +497,54 @@ final class _PaginatedControllerImpl extends TableController
       headers: headers,
       rows: dataRows,
     );
+  }
+}
+
+base mixin DefaultFinderImplMixin on TableController
+    implements TableIndexFinder {
+  TableDataController get _data => rows as TableDataController;
+  TableHeaderController get _header => columns as TableHeaderController;
+
+  @override
+  int getRowIndex(RowKey key) {
+    return _data.getRowIndex(key);
+  }
+
+  @override
+  RowKey? getRowKey(int index) {
+    /// when index is 0, it means this row is th th header row, which does not have a row key.
+    if (index == 0) return null;
+
+    return _data.getRowKey(index);
+  }
+
+  @override
+  RowKey? previousRow(RowKey key) {
+    return _data.previous(key);
+  }
+
+  @override
+  RowKey? nextRow(RowKey key) {
+    return _data.next(key);
+  }
+
+  @override
+  int? getColumnIndex(ColumnKey key) {
+    return _header.getColumnIndex(key);
+  }
+
+  @override
+  ColumnKey getColumnKey(int index) {
+    return _header.getColumnKey(index);
+  }
+
+  @override
+  ColumnKey? previousColumn(ColumnKey key) {
+    return _header.previous(key);
+  }
+
+  @override
+  ColumnKey? nextColumn(ColumnKey key) {
+    return _header.next(key);
   }
 }
