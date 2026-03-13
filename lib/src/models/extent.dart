@@ -157,7 +157,15 @@ final class _AutoExtent extends Extent {
 
   @override
   Extent accept(double delta) {
-    return Extent.fixed(delta);
+    return switch (reference) {
+      _FixedExtent _ => Extent.fixed(delta),
+      _RangeExtent range => Extent.range(
+          min: range.min != null ? math.min(range.min!, delta) : delta,
+          max: range.max != null ? math.max(range.max!, delta) : delta,
+          pixels: delta,
+        ),
+      _ => throw StateError("Never reached")
+    };
   }
 
   @override

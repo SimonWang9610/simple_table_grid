@@ -6,7 +6,7 @@ import 'package:simple_table_grid/src/controllers/misc.dart';
 
 /// TODO: evict all measurements when columns increase (the new columns may affect the layout of all rows and cause all measured row extents invalid).
 /// TODO: evict some measurements when rows change
-abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
+abstract base class TableSizer with ChangeNotifier, DynamicExtentMeasurer {
   /// set the extent at the given [index] for the row.
   void setRowExtent(int index, Extent extent);
 
@@ -52,13 +52,13 @@ final class TableExtentController extends TableSizer
     Map<ColumnKey, Extent>? columnExtents,
   })  : _defaultRowExtent = defaultRowExtent,
         _defaultColumnExtent = defaultColumnExtent {
-    assert(!defaultColumnExtent.isDynamic,
-        'Default column extent cannot be dynamic.');
+    // assert(!defaultColumnExtent.isDynamic,
+    //     'Default column extent cannot be dynamic.');
 
-    assert(
-        columnExtents == null ||
-            !columnExtents.values.any((extent) => extent.isDynamic),
-        "Column extents cannot be dynamic.");
+    // assert(
+    //     columnExtents == null ||
+    //         !columnExtents.values.any((extent) => extent.isDynamic),
+    //     "Column extents cannot be dynamic.");
 
     if (rowExtents != null) {
       _mutatedRowExtents.addAll(rowExtents);
@@ -89,6 +89,7 @@ final class TableExtentController extends TableSizer
   final Map<int, Extent> _mutatedRowExtents = {};
   final Map<ColumnKey, Extent> _mutatedColumnExtents = {};
   final _measuredRowExtents = _RowExtentMeasurement();
+  final _measuredColumnExtents = _ColumnExtentMeasurement();
 
   Extent get defaultRowExtent => _defaultRowExtent;
   Extent get defaultColumnExtent => _defaultColumnExtent;
@@ -129,11 +130,15 @@ final class TableExtentController extends TableSizer
   }
 
   Extent _getColumnExtent(ColumnKey key) {
-    if (_mutatedColumnExtents.containsKey(key)) {
-      return _mutatedColumnExtents[key]!;
+    final extent = _mutatedColumnExtents[key] ?? _defaultColumnExtent;
+
+    if (extent.isDynamic) {
+      final measured = _measuredColumnExtents.get(key);
+
+      if (measured != null) return measured;
     }
 
-    return _defaultColumnExtent;
+    return extent;
   }
 
   @override
@@ -162,6 +167,14 @@ final class TableExtentController extends TableSizer
     /// as pin/unpin/sorting/replacing may also change the row index of the row key.
     final rowKey = finder.getRowKey(rowIndex);
     _measuredRowExtents.update(rowKey, extent);
+  }
+
+  @override
+  void updateMeasuredColumnExtent(int columnIndex, Extent extent) {
+    assert(!extent.isDynamic, 'The new extent must not be dynamic.');
+
+    final columnKey = finder.getColumnKey(columnIndex);
+    _measuredColumnExtents.update(columnKey, extent);
   }
 
   @override
@@ -281,5 +294,27 @@ class _RowExtentMeasurement {
   void evictAll() {
     _measuredRowExtents.clear();
     _measureHeaderRowExtent = null;
+  }
+}
+
+class _ColumnExtentMeasurement {
+  final Map<ColumnKey, Extent> _measuredColumnExtents = {};
+
+  void update(ColumnKey columnKey, Extent extent) {
+    assert(!extent.isDynamic, 'Measured extent cannot be dynamic.');
+
+    _measuredColumnExtents[columnKey] = extent;
+  }
+
+  Extent? get(ColumnKey columnKey) {
+    return _measuredColumnExtents[columnKey];
+  }
+
+  void evict(ColumnKey columnKey) {
+    _measuredColumnExtents.remove(columnKey);
+  }
+
+  void evictAll() {
+    _measuredColumnExtents.clear();
   }
 }

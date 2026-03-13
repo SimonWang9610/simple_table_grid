@@ -47,7 +47,7 @@ class TableGridView extends TwoDimensionalScrollView {
     required CellExtentBuilder rowExtentBuilder,
     required CellExtentBuilder columnExtentBuilder,
     required CellWidgetBuilder builder,
-    required RowExtentMeasurer rowExtentMeasurer,
+    required DynamicExtentMeasurer extentMeasurer,
     this.verticalBorderSide = BorderSide.none,
     this.horizontalBorderSide = BorderSide.none,
   })  : assert(pinnedColumnCount >= 0),
@@ -65,7 +65,7 @@ class TableGridView extends TwoDimensionalScrollView {
             pinnedRowCount: pinnedRowCount,
             rowExtentBuilder: rowExtentBuilder,
             columnExtentBuilder: columnExtentBuilder,
-            rowExtentMeasurer: rowExtentMeasurer,
+            extentMeasurer: extentMeasurer,
           ),
         );
 
@@ -93,7 +93,7 @@ class TableGridView extends TwoDimensionalScrollView {
             pinnedRowCount: controller.rows.pinnedCount,
             rowExtentBuilder: controller.sizer.getRowExtent,
             columnExtentBuilder: controller.sizer.getColumnExtent,
-            rowExtentMeasurer: controller.sizer,
+            extentMeasurer: controller.sizer,
           ),
         );
 

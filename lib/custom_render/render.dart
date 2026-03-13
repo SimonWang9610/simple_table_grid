@@ -6,9 +6,10 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:simple_table_grid/custom_render/delegate.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 
 class RenderTableGridViewport extends RenderTwoDimensionalViewport
-    with _ViewportMetrics, _DynamicRowMeasurement, _GridBorderPainter {
+    with _ViewportMetrics, _DynamicExtentMeasurement, _GridBorderPainter {
   RenderTableGridViewport({
     required super.horizontalOffset,
     required super.horizontalAxisDirection,
@@ -104,11 +105,13 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
 
   @override
   void layoutChildSequence() {
+    print("======== performLayout start ==========");
     _laidOutVicinities.clear();
 
     if (needsDelegateRebuild || didResize || _needsMetricsRefresh) {
       _columnMetrics.clear();
       _rowMetrics.clear();
+      _measureDynamicColumns();
       _updateColumnMetrics();
       _updateRowMetrics();
       _updateScrollBounds();
@@ -201,6 +204,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
     }
 
     _measureDynamicRows();
+
+    print("======== performLayout end ==========");
   }
 
   void _layoutCells({
@@ -221,11 +226,16 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
         final columnSpan = _columnMetrics[column]!;
         final vicinity = ChildVicinity(xIndex: column, yIndex: row);
 
-        /// Remember the laid out vicinity so that we can skip building this cell
-        /// during the measurement phase if this row is dynamic.
-        _laidOutVicinities.add(vicinity);
+        // final measuredInThisPass = _laidOutVicinities.contains(vicinity);
+        // final cell = measuredInThisPass
+        //     ? (getChildFor(vicinity) ?? buildOrObtainChildFor(vicinity))
+        //     : buildOrObtainChildFor(vicinity);
 
-        final cell = buildOrObtainChildFor(vicinity);
+        // /// Remember the laid out vicinity so dynamic row measurement can avoid
+        // /// rebuilding cells already obtained in this layout pass.
+        // _laidOutVicinities.add(vicinity);
+
+        final (cell, _) = _obtainCellForMeasurement(vicinity);
 
         if (cell != null) {
           final data = parentDataOf(cell);
@@ -269,6 +279,9 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
     _Span updateSpan(int column, bool isPinned, double leadingOffset) {
       final span = _columnMetrics.remove(column) ?? _Span();
       final hExtent = delegate.getColumnExtent(column);
+
+      assert(!hExtent.isDynamic,
+          "all dynamic column should have been measured at this point");
 
       span.update(
         leadingOffset: leadingOffset,
@@ -855,9 +868,106 @@ mixin _ViewportMetrics on RenderTwoDimensionalViewport {
   bool _needsMetricsRefresh = false;
 }
 
-mixin _DynamicRowMeasurement on RenderTwoDimensionalViewport, _ViewportMetrics {
+mixin _DynamicExtentMeasurement
+    on RenderTwoDimensionalViewport, _ViewportMetrics {
   final _dynamicRows = <int>{};
   final _laidOutVicinities = <ChildVicinity>{};
+
+  bool _measureDynamicColumns() {
+    final dynamicColumns = <int, Extent>{};
+
+    for (int column = 0; column < delegate.columnCount; column++) {
+      final extent = delegate.getColumnExtent(column);
+      if (extent.isDynamic) {
+        dynamicColumns[column] = extent;
+      }
+    }
+
+    if (dynamicColumns.isEmpty) return false;
+
+    bool hasColumnMeasured = false;
+
+    final headerRowExtent = delegate.getRowExtent(0);
+
+    double columnLeading = 0;
+
+    double maxRowHeight = 0;
+
+    for (final entry in dynamicColumns.entries) {
+      final column = entry.key;
+      final colExtent = entry.value;
+
+      final vicinity = ChildVicinity(xIndex: column, yIndex: 0);
+
+      final (cell, _) = _obtainCellForMeasurement(vicinity);
+
+      if (cell == null) continue;
+
+      hasColumnMeasured = true;
+
+      final computedCellWidth = headerRowExtent.calculate(
+        viewportDimension.height,
+        remainingSpace: viewportDimension.height,
+        pinned: delegate.pinnedRowCount > 0,
+      );
+
+      final minCellHeight =
+          !headerRowExtent.isDynamic ? computedCellWidth : 0.0;
+      final maxCellHeight =
+          !headerRowExtent.isDynamic ? computedCellWidth : double.infinity;
+
+      cell.layout(
+        BoxConstraints(
+          minHeight: minCellHeight,
+          maxHeight: maxCellHeight,
+          minWidth: _verticalBorderWidth,
+          maxWidth: double.infinity,
+        ),
+        parentUsesSize: true,
+      );
+
+      final data = parentDataOf(cell);
+
+      data.layoutOffset = Offset(
+        columnLeading + _verticalBorderWidth,
+        _horizontalBorderWidth,
+      );
+
+      maxRowHeight = math.max(maxRowHeight, cell.size.height);
+
+      columnLeading = data.layoutOffset!.dx + cell.size.width;
+
+      delegate.updateMeasuredColumnExtent(
+        column,
+        colExtent.accept(cell.size.width + _verticalBorderWidth),
+      );
+
+      if (headerRowExtent.isDynamic) {
+        delegate.updateMeasuredRowExtent(
+          0,
+          headerRowExtent.accept(maxRowHeight + _horizontalBorderWidth),
+        );
+      }
+    }
+
+    return hasColumnMeasured;
+  }
+
+  (RenderBox?, bool) _obtainCellForMeasurement(ChildVicinity vicinity) {
+    RenderBox? cell;
+
+    if (_laidOutVicinities.contains(vicinity)) {
+      cell = getChildFor(vicinity);
+      if (cell != null) {
+        return (cell, true);
+      }
+    }
+
+    cell = buildOrObtainChildFor(vicinity);
+    _laidOutVicinities.add(vicinity);
+
+    return (cell, false);
+  }
 
   /// Measures the dynamic rows by laying out all cells in those rows to determine the max cell height,
   /// it is quite expensively, as it will force to schedule a new layout pass after the measurement is done,
@@ -885,22 +995,9 @@ mixin _DynamicRowMeasurement on RenderTwoDimensionalViewport, _ViewportMetrics {
 
         final vicinity = ChildVicinity(xIndex: column, yIndex: row);
 
-        final RenderBox? cell;
+        final (cell, cached) = _obtainCellForMeasurement(vicinity);
 
-        final bool needSetupParentData;
-
-        if (_laidOutVicinities.contains(vicinity)) {
-          cell = getChildFor(vicinity);
-          needSetupParentData = false;
-        } else {
-          cell = buildOrObtainChildFor(vicinity);
-          _laidOutVicinities.add(vicinity);
-          needSetupParentData = true;
-        }
-
-        if (cell == null) {
-          continue;
-        }
+        if (cell == null) continue;
 
         hasRowMeasured = true;
 
@@ -917,7 +1014,7 @@ mixin _DynamicRowMeasurement on RenderTwoDimensionalViewport, _ViewportMetrics {
           parentUsesSize: true,
         );
 
-        if (needSetupParentData) {
+        if (!cached) {
           /// It may have UI flicker if we set the layout offset for cells during the measurement phase,
           /// but it is necessary to ensure the correct layout of cells in dynamic rows,
           final data = parentDataOf(cell);
