@@ -81,6 +81,7 @@ final class TableExtentController extends TableSizer
 
   final Map<int, Extent> _mutatedRowExtents = {};
   final Map<ColumnKey, Extent> _mutatedColumnExtents = {};
+  final _measuredRowExtents = _RowExtentMeasurement();
 
   Extent get defaultRowExtent => _defaultRowExtent;
   Extent get defaultColumnExtent => _defaultColumnExtent;
@@ -95,6 +96,12 @@ final class TableExtentController extends TableSizer
 
   @override
   Extent getRowExtent(int index) {
+    final rowKey = finder.getRowKey(index);
+
+    final measured = _measuredRowExtents.get(rowKey);
+
+    if (measured != null) return measured;
+
     if (_mutatedRowExtents.containsKey(index)) {
       return _mutatedRowExtents[index]!;
     }
@@ -131,11 +138,9 @@ final class TableExtentController extends TableSizer
   @override
   void updateMeasuredRowExtent(int rowIndex, Extent extent) {
     assert(!extent.isDynamic, 'The new extent must not be dynamic.');
-    final current = getRowExtent(rowIndex);
 
-    if (!current.isDynamic) return;
-
-    _mutatedRowExtents[rowIndex] = extent;
+    final rowKey = finder.getRowKey(rowIndex);
+    _measuredRowExtents.update(rowKey, extent);
   }
 
   @override
@@ -204,8 +209,46 @@ final class TableExtentController extends TableSizer
   @override
   void dispose() {
     _target = null;
+    _measuredRowExtents.evictAll();
     _mutatedRowExtents.clear();
     _mutatedColumnExtents.clear();
     super.dispose();
+  }
+}
+
+class _RowExtentMeasurement {
+  final Map<RowKey, Extent> _measuredRowExtents = {};
+
+  Extent? _measureHeaderRowExtent;
+
+  void update(RowKey? rowKey, Extent extent) {
+    assert(!extent.isDynamic, 'Measured extent cannot be dynamic.');
+
+    if (rowKey == null) {
+      _measureHeaderRowExtent = extent;
+    } else {
+      _measuredRowExtents[rowKey] = extent;
+    }
+  }
+
+  Extent? get(RowKey? rowKey) {
+    if (rowKey == null) {
+      return _measureHeaderRowExtent;
+    }
+
+    return _measuredRowExtents[rowKey];
+  }
+
+  void evict(RowKey? rowKey) {
+    if (rowKey == null) {
+      _measureHeaderRowExtent = null;
+    } else {
+      _measuredRowExtents.remove(rowKey);
+    }
+  }
+
+  void evictAll() {
+    _measuredRowExtents.clear();
+    _measureHeaderRowExtent = null;
   }
 }
