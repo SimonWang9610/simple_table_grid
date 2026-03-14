@@ -47,19 +47,19 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     ),
     CustomDataGridModel(
       columnName: 'CardAssignments',
-      isDisplayed: false,
+      isDisplayed: true,
       width: 400,
       position: 5,
     ),
     CustomDataGridModel(
       columnName: 'BadgeType',
-      isDisplayed: false,
+      isDisplayed: true,
       width: 400,
       position: 6,
     ),
     CustomDataGridModel(
       columnName: 'Tags',
-      isDisplayed: false,
+      isDisplayed: true,
       width: 300,
       position: 7,
     ),
@@ -99,22 +99,15 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     _tableController = TableController(
       columns: columns,
       pinnedColumns: pinnedColumns,
-      defaultRowExtent: widget.useAutoRowExtent
-          ? Extent.auto(max: 100)
-          : const Extent.fixed(60),
-      defaultColumnExtent: widget.useAutoRowExtent
-          ? Extent.auto(min: 80, max: 200)
-          : const Extent.range(
-              min: 80,
-              max: 200,
-              pixels: 100,
-            ),
-      // defaultColumnExtent: Extent.range(pixels: 200, min: 100).auto(),
+      defaultRowExtent:
+          Extent.fixed(pixels: widget.useAutoRowExtent ? null : 60),
+      defaultColumnExtent: Extent.ranged(
+          pixels: widget.useAutoRowExtent ? null : 180, max: 250, min: 100),
       columnExtents: widget.useAutoRowExtent ? null : columnExtents,
       rowExtents: {
         /// the 3rd data row will always have a fixed extent of 40,
         /// it take highest priority than other extents
-        3: const Extent.fixed(40),
+        3: Extent.fixed(pixels: 40),
       },
     );
   }

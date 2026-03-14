@@ -161,8 +161,9 @@ final class TableExtentController extends TableSizer
 
     final accepted = extent.accept(delta);
 
-    if (accepted == extent) return;
-    setColumnExtent(actualKey, accepted);
+    if (accepted) {
+      notify();
+    }
   }
 
   void _resizeRow(RowKey rowKey, ResizeDirection direction, double delta) {
@@ -175,8 +176,9 @@ final class TableExtentController extends TableSizer
 
     final accepted = extent.accept(delta);
 
-    if (accepted == extent) return;
-    setRowExtent(index, accepted);
+    if (accepted) {
+      notify();
+    }
   }
 
   @override

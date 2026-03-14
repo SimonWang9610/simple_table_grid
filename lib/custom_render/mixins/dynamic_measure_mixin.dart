@@ -89,24 +89,27 @@ mixin TableDynamicExtentMeasurerMixin
 
   bool measureHeaderRowIfNeeded() {
     final headerRowExtent = delegate.getRowExtent(0);
-    final needMeasuredColumns = <int, Extent>{};
+
+    bool needMeasureColumn = false;
 
     for (int column = 0; column < delegate.columnCount; column++) {
       final colExtent = delegate.getColumnExtent(column);
+
       if (!colExtent.isMeasured) {
-        needMeasuredColumns[column] = colExtent;
+        needMeasureColumn = true;
+        break;
       }
+    }
+
+    if (!needMeasureColumn && headerRowExtent.isMeasured) {
+      return false;
     }
 
     bool headerRowMeasured = false;
 
-    if (needMeasuredColumns.isEmpty && headerRowExtent.isMeasured) {
-      return headerRowMeasured;
-    }
-
     final (minHeaderCellHeight, maxHeaderCellHeight) = headerRowExtent.range;
 
-    // double columnLeading = 0;
+    double columnLeading = 0;
     double maxHeaderRowHeight = 0;
 
     /// as long as there is at least one column or the header row itself is not measured,
@@ -134,8 +137,21 @@ mixin TableDynamicExtentMeasurerMixin
         parentUsesSize: true,
       );
 
-      maxHeaderRowHeight = math.max(maxHeaderRowHeight, cell.size.height);
+      /// Some header cells may not be visible due to horizontal scrolling when layout the header row,
+      /// but we forcely build and layout them.
+      ///
+      /// so we need also to set their layout offset to the correct position to
+      /// make sure they are in the right place when they become visible.
+      final data = parentDataOf(cell);
 
+      data.layoutOffset = Offset(
+        columnLeading + verticalBorderWidth,
+        horizontalBorderWidth,
+      );
+
+      columnLeading = data.layoutOffset!.dx + cell.size.width;
+
+      maxHeaderRowHeight = math.max(maxHeaderRowHeight, cell.size.height);
       colExtent.acceptMeasurement(cell.size.width);
     }
 

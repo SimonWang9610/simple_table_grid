@@ -1,59 +1,80 @@
 import 'dart:math' as math;
 
 abstract interface class ExtentMeasurable {
+  /// If this extent has been measured with actual pixels.
+  /// If false, [acceptMeasurement] will be called to set the measured pixels for this extent.
   bool get isMeasured;
 
+  /// Reset the measured pixels to the initial state.
+  /// If the extent has been given initial pixels, it will reset to the initial pixels;
+  /// otherwise, it will reset to null, and the extent will be measured again when needed.
   void reset();
+
+  /// Set the measured pixels for this extent.
+  /// This method will be called when the extent is measured with actual pixels.
   Extent acceptMeasurement(double measuredPixels);
 
+  /// Get the layout range of this extent, which is a tuple of (min, max).
+  /// It is mainly used to estimate the layout range of the row or column when we need to measure the extent of a cell
+  /// but the extent of the corresponding row or column is not measured yet.
   (double, double) get range;
 }
 
-/// A class representing the extent of a row or column in a table grid.
-/// Only [Extent.range] supports resizing.
-/// Other extents are fixed and do not change during resizing.
 sealed class Extent implements ExtentMeasurable {
   const Extent();
 
-  const factory Extent.fixed(double pixels) = _FixedExtent;
-  const factory Extent.range({
-    double? min,
-    double? max,
-    required double pixels,
+  /// Create a fixed extent with the given pixels.
+  ///
+  /// If [pixels] is null, it will be treated as dynamically measured extent,
+  /// which means [isMeasured] will be `false` until it is measured with actual pixels.
+  ///
+  /// Once [acceptMeasurement] is called, the measured pixels will be set for this extent
+  /// until [reset] is called to reset the measured pixels to the initial state.
+  factory Extent.fixed({double? pixels}) = _FixedExtent;
+
+  /// Create a range extent with the given min, max and pixels.
+  ///
+  /// If [pixels] is null, it will be treated as dynamically measured extent,
+  /// which means [isMeasured] will be `false` until it is measured with actual pixels.
+  ///
+  /// Once [acceptMeasurement] is called, the measured pixels will be set for this extent
+  /// until [reset] is called to reset the measured pixels to the initial state.
+  ///
+  /// [min] and [max] are used to define the valid range that can be used to limit the resize behavior of this extent.
+  ///
+  /// Defaults to `0` and `double.infinity`, which means the extent can be resized freely without limits.
+  factory Extent.ranged({
+    double min,
+    double max,
+    double? pixels,
   }) = _RangeExtent;
 
-  factory Extent.auto({
-    double? min,
-    double? max,
-  }) = AutoExtent;
-
+  /// Used to compute the span extent of the row or column with this extent during layout
+  /// based on the given [viewportExtent] and [remainingSpace].
   double calculate(
     double viewportExtent, {
     required double remainingSpace,
     bool pinned = false,
   });
 
-  Extent accept(double delta);
+  /// Accept the change of this extent with the given delta, and return the updated extent.
+  ///
+  /// Typically, this method will be called when the user resize a row or column with drag gesture,
+  /// and the delta is the change of the drag gesture.
+  ///
+  /// For [Extent.fixed], it will ignore the delta and return itself directly since the extent is fixed.
+  /// For [Extent.ranged], it will apply the delta to the current pixels within the valid range defined by min and max,
+  bool accept(double delta);
 
-  @override
-  bool get isMeasured => true;
-
-  @override
-  Extent acceptMeasurement(double measuredPixels) => this;
-
-  @override
-  void reset() {}
-
-  /// Designed for [AutoExtent],
-  /// as [AutoExtent] will be updated in-place after measurement,
-  /// so we need to clone it when assigning to ensure the default extent is not affected by the measurement.
   Extent clone();
 }
 
 final class _FixedExtent extends Extent {
-  final double pixels;
+  final double? pixels;
 
-  const _FixedExtent(this.pixels);
+  _FixedExtent({this.pixels}) : _pixels = pixels;
+
+  double? _pixels;
 
   @override
   double calculate(
@@ -61,53 +82,76 @@ final class _FixedExtent extends Extent {
     required double remainingSpace,
     bool pinned = false,
   }) {
+    assert(isMeasured,
+        'Extent must be measured before calculating the layout extent');
+
     if (!pinned) {
-      return pixels;
+      return _pixels ?? 0;
     }
 
-    final allowed = math.min(pixels, remainingSpace);
+    final allowed = math.min(_pixels ?? 0, remainingSpace);
     return allowed >= 0 ? allowed : 0;
   }
 
   @override
-  Extent accept(double delta) => this;
+  bool accept(double delta) => false;
 
   @override
-  (double, double) get range => (pixels, pixels);
+  bool get isMeasured => _pixels != null;
 
   @override
-  Extent clone() => _FixedExtent(pixels);
+  Extent acceptMeasurement(double measuredPixels) {
+    _pixels = measuredPixels;
+
+    return this;
+  }
 
   @override
-  int get hashCode => pixels.hashCode;
+  (double, double) get range => (_pixels ?? 0, _pixels ?? double.infinity);
+
+  @override
+  Extent clone() => _FixedExtent(pixels: pixels);
+
+  @override
+  void reset() {
+    _pixels = pixels;
+  }
+
+  @override
+  int get hashCode => _pixels.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is _FixedExtent &&
           runtimeType == other.runtimeType &&
-          pixels == other.pixels;
+          _pixels == other._pixels;
 
   @override
   String toString() {
-    return "_FixedExtent(pixels: $pixels)";
+    return "_FixedExtent(pixels: $_pixels)";
   }
 }
 
 final class _RangeExtent extends Extent {
-  final double? min;
-  final double? max;
-  final double pixels;
+  final double min;
+  final double max;
+  final double? pixels;
 
-  const _RangeExtent({
-    this.min,
-    this.max,
-    required this.pixels,
-  })  : assert(min == null || min >= 0),
-        assert(max == null || max >= 0),
-        assert(pixels >= 0),
-        assert((pixels >= (min ?? 0)) && (pixels <= (max ?? double.infinity)),
-            'pixels must be within the range defined by min and max');
+  _RangeExtent({
+    this.min = 0.0,
+    this.max = double.infinity,
+    this.pixels,
+  })  : assert(min >= 0),
+        assert(max >= 0),
+        assert(pixels == null || pixels >= 0),
+        assert(
+            (pixels == null || pixels >= min) &&
+                (pixels == null || pixels <= max),
+            'pixels must be within the range defined by min and max'),
+        _pixels = pixels;
+
+  double? _pixels;
 
   @override
   double calculate(
@@ -115,46 +159,54 @@ final class _RangeExtent extends Extent {
     required double remainingSpace,
     bool pinned = false,
   }) {
+    assert(isMeasured,
+        'Extent must be measured before calculating the layout extent');
+
     if (!pinned) {
-      return _insidePixels;
+      return _pixels ?? 0;
     }
 
-    final allowed = math.min(_insidePixels, remainingSpace);
+    final allowed = math.min(_pixels ?? 0, remainingSpace);
     return allowed >= 0 ? allowed : 0;
   }
 
-  double get _insidePixels {
-    if (min != null && pixels < min!) {
-      return min!;
-    } else if (max != null && pixels > max!) {
-      return max!;
-    }
-    return pixels;
+  @override
+  bool get isMeasured => _pixels != null;
+
+  @override
+  Extent acceptMeasurement(double measuredPixels) {
+    _pixels = measuredPixels.clamp(min, max);
+    return this;
   }
 
   @override
-  Extent accept(double delta) {
-    final newPixels = _insidePixels + delta;
+  bool accept(double delta) {
+    assert(isMeasured, 'Extent must be measured before accepting changes');
 
-    final accepted =
-        newPixels >= (min ?? 0) && newPixels <= (max ?? double.infinity);
+    final newPixels = (_pixels ?? 0) + delta;
 
-    if (accepted && newPixels != pixels) {
-      // print('Range extent accepted: $newPixels');
-      return _RangeExtent(min: min, max: max, pixels: newPixels);
-    } else {
-      return this; // No change if outside the range
+    if (newPixels < min || newPixels > max) {
+      return false;
     }
+
+    _pixels = newPixels;
+
+    return true;
   }
 
   @override
-  (double, double) get range => (min ?? pixels, max ?? pixels);
+  (double, double) get range => (_pixels ?? min, _pixels ?? max);
 
   @override
   Extent clone() => _RangeExtent(min: min, max: max, pixels: pixels);
 
   @override
-  int get hashCode => Object.hash(min, max, pixels);
+  void reset() {
+    _pixels = pixels;
+  }
+
+  @override
+  int get hashCode => Object.hash(min, max, pixels, _pixels);
 
   @override
   bool operator ==(Object other) =>
@@ -163,104 +215,11 @@ final class _RangeExtent extends Extent {
           runtimeType == other.runtimeType &&
           min == other.min &&
           max == other.max &&
-          pixels == other.pixels;
+          pixels == other.pixels &&
+          _pixels == other._pixels;
 
   @override
   String toString() {
-    return "_RangeExtent(min: $min, max: $max, pixels: $pixels)";
-  }
-}
-
-final class AutoExtent extends Extent {
-  final double? min;
-  final double? max;
-
-  AutoExtent({
-    this.min,
-    this.max,
-  })  : assert(min == null || min >= 0),
-        assert(max == null || max >= 0);
-
-  @override
-  double calculate(
-    double viewportExtent, {
-    required double remainingSpace,
-    bool pinned = false,
-  }) {
-    final pixels = _measuredPixels ?? 0;
-
-    if (!pinned) {
-      return pixels;
-    }
-
-    final allowed = math.min(pixels, remainingSpace);
-    return allowed >= 0 ? allowed : 0;
-  }
-
-  @override
-  Extent accept(double delta) {
-    if (_measuredPixels != null) {
-      final newPixels = _measuredPixels! + delta;
-
-      final accepted =
-          newPixels >= (min ?? 0) && newPixels <= (max ?? double.infinity);
-
-      if (accepted) {
-        _measuredPixels = newPixels;
-      }
-    }
-
-    return this; // No change if not measured yet or outside the range
-  }
-
-  @override
-  (double, double) get range => (
-        _measuredPixels ?? (min ?? 0),
-        _measuredPixels ?? (max ?? double.infinity)
-      );
-
-  double? _measuredPixels;
-
-  @override
-  bool get isMeasured => _measuredPixels != null;
-
-  @override
-  Extent acceptMeasurement(double measuredPixels) {
-    if (min != null && measuredPixels < min!) {
-      _measuredPixels = min!;
-    } else if (max != null && measuredPixels > max!) {
-      _measuredPixels = max!;
-    } else {
-      _measuredPixels = measuredPixels;
-    }
-
-    return this;
-  }
-
-  @override
-  void reset() {
-    _measuredPixels = null;
-  }
-
-  @override
-  Extent clone() {
-    return AutoExtent(min: min, max: max);
-  }
-
-  @override
-  int get hashCode => Object.hash(min, max, _measuredPixels);
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is AutoExtent &&
-          runtimeType == other.runtimeType &&
-          min == other.min &&
-          max == other.max &&
-          _measuredPixels == other._measuredPixels;
-
-  @override
-  String toString() {
-    return "AutoExtent(min: $min, max: $max, measuredPixels: $_measuredPixels)";
+    return "_RangeExtent(min: $min, max: $max, pixels: $pixels, measuredPixels: $_pixels)";
   }
 }

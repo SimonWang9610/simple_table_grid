@@ -72,12 +72,12 @@ enum PropertyTypeEnum {
 extension ToColumnKeyExt on CustomDataGridModel {
   ColumnKey get columnKey => ColumnKey(columnName);
 
-  Extent buildExtent({double min = 100, double? max}) {
+  Extent buildExtent({double min = 100, double max = double.infinity}) {
     if (!allowResizing) {
-      return Extent.fixed(width);
+      return Extent.fixed(pixels: width);
     }
 
-    return Extent.range(
+    return Extent.ranged(
       pixels: width,
       min: min,
       max: max, // Optional max width
