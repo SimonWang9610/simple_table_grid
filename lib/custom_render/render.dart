@@ -631,7 +631,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
           axisDirectionIsReversed(verticalAxisDirection)
               ? 0.0
               : _pinnedRowsExtent,
-          _pinnedColumnsExtent,
+          _pinnedColumnsExtent + verticalBorderWidth,
           viewportDimension.height - _pinnedRowsExtent + horizontalBorderWidth,
         ),
         (PaintingContext context, Offset offset) {
