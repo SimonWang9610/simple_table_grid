@@ -217,10 +217,10 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
                         ),
                       ),
                       border: TableGridBorder(
-                        vertical: BorderSide(color: Colors.green, width: 8),
+                        vertical: BorderSide(color: Colors.red, width: 2),
                         horizontal: BorderSide(
                           color: Colors.red,
-                          width: 8,
+                          width: 2,
                         ),
                       ),
                     ),

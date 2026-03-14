@@ -35,7 +35,6 @@ mixin TableGridPaintingMixin on TableViewportMetrics {
     final clipBounds = canvas.getLocalClipBounds();
     final clippedEndX = math.min(endX, clipBounds.right - offset.dx);
     final clippedEndY = math.min(endY, clipBounds.bottom - offset.dy);
-    print("ClippedX: $clippedEndX/$endX, ClippedY: $clippedEndY/$endY");
 
     if (verticalBorderWidth > 0) {
       final verticalPaint = Paint()
@@ -48,7 +47,7 @@ mixin TableGridPaintingMixin on TableViewportMetrics {
       final verticalPoints = Float32List(verticalSegmentCount * 4);
       int pointIndex = 0;
       final yStart = offset.dy + startY;
-      final yEnd = offset.dy + clippedEndY;
+      final yEnd = offset.dy + clippedEndY + horizontalBorderWidth / 2;
 
       for (int column = start.xIndex; column <= end.xIndex; column++) {
         final x = getColumnSpan(column)!.leadingOffset +
@@ -65,7 +64,7 @@ mixin TableGridPaintingMixin on TableViewportMetrics {
 
       final trailingX = math.max(
         startX + verticalBorderWidth / 2,
-        clippedEndX - verticalBorderWidth / 2,
+        clippedEndX,
       );
 
       verticalPoints[pointIndex++] = offset.dx + trailingX;
@@ -91,7 +90,7 @@ mixin TableGridPaintingMixin on TableViewportMetrics {
       final horizontalPoints = Float32List(horizontalSegmentCount * 4);
       int pointIndex = 0;
       final xStart = offset.dx + startX;
-      final xEnd = offset.dx + clippedEndX;
+      final xEnd = offset.dx + clippedEndX + verticalBorderWidth / 2;
 
       for (int row = start.yIndex; row <= end.yIndex; row++) {
         final y = getRowSpan(row)!.leadingOffset +
@@ -107,7 +106,7 @@ mixin TableGridPaintingMixin on TableViewportMetrics {
 
       final trailingY = math.max(
         startY + horizontalBorderWidth / 2,
-        clippedEndY - horizontalBorderWidth / 2,
+        clippedEndY,
       );
 
       horizontalPoints[pointIndex++] = xStart;

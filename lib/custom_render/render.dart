@@ -578,6 +578,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       return;
     }
 
+    /// Painting D area
     if (_firstNonPinnedCell != null) {
       assert(_lastNonPinnedCell != null);
 
@@ -591,8 +592,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
           axisDirectionIsReversed(verticalAxisDirection)
               ? 0.0
               : _pinnedRowsExtent,
-          viewportDimension.width - _pinnedColumnsExtent,
-          viewportDimension.height - _pinnedRowsExtent,
+          viewportDimension.width - _pinnedColumnsExtent + verticalBorderWidth,
+          viewportDimension.height - _pinnedRowsExtent + horizontalBorderWidth,
         ),
         (PaintingContext context, Offset offset) {
           _paintCells(
@@ -616,6 +617,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       _clipCellsHandle.layer = null;
     }
 
+    /// Painting C area
     if (_lastPinnedColumn != null && _rowMetrics.firstNonPinned != null) {
       // Paint all visible pinned column cells that do not intersect with pinned
       // row cells.
@@ -630,7 +632,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
               ? 0.0
               : _pinnedRowsExtent,
           _pinnedColumnsExtent,
-          viewportDimension.height - _pinnedRowsExtent,
+          viewportDimension.height - _pinnedRowsExtent + horizontalBorderWidth,
         ),
         (PaintingContext context, Offset offset) {
           _paintCells(
@@ -666,6 +668,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       _clipPinnedColumnsHandle.layer = null;
     }
 
+    /// Painting B area
     if (_lastPinnedRow != null && _columnMetrics.firstNonPinned != null) {
       // Paint all visible pinned row cells that do not intersect with pinned
       // column cells.
@@ -679,8 +682,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
           axisDirectionIsReversed(verticalAxisDirection)
               ? viewportDimension.height - _pinnedRowsExtent
               : 0.0,
-          viewportDimension.width - _pinnedColumnsExtent,
-          _pinnedRowsExtent,
+          viewportDimension.width - _pinnedColumnsExtent + verticalBorderWidth,
+          _pinnedRowsExtent + horizontalBorderWidth,
         ),
         (PaintingContext context, Offset offset) {
           _paintCells(
@@ -716,6 +719,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       _clipPinnedRowsHandle.layer = null;
     }
 
+    /// Painting A area
     if (_lastPinnedRow != null && _lastPinnedColumn != null) {
       _paintCells(
         context: context,
