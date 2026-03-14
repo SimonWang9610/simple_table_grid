@@ -76,6 +76,8 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
   int? get _lastPinnedColumn =>
       delegate.pinnedColumnCount > 0 ? delegate.pinnedColumnCount - 1 : null;
 
+  int? get _lastVisibleRow => _rowMetrics.lastNonPinned ?? _lastPinnedRow;
+
   double get _pinnedColumnsExtent => _lastPinnedColumn != null
       ? _columnMetrics[_lastPinnedColumn!]!.trailingOffset
       : 0.0;
@@ -237,9 +239,10 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       );
     }
 
-    final hasRowMeasured = measureDynamicRows();
+    /// we only measure dynamic rows after we are sure about the first and last visible rows,
+    /// as measuring dynamic rows is quite expensive, and we want to avoid measuring unnecessary rows as much as possible.
 
-    if (hasRowMeasured) {
+    if (measureVisibleDynamicRows(_lastVisibleRow ?? 0)) {
       _needsMetricsRefresh = true;
       _scheduleMetricsRefresh();
     }
@@ -396,8 +399,6 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       /// We will schedule a post-frame callback to do that after the layout is complete,
       /// as we cannot [markNeedsLayout] during performLayout.
       if (!vExtent.isMeasured) {
-        markRowNeedsMeasurement(row, vExtent);
-
         /// for this layout pass, we refer to the header row's extent for dynamic rows,
         /// as it is the only row that is measured before computing row metrics,
         vExtent = delegate.getRowExtent(0);

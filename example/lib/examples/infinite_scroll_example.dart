@@ -7,9 +7,11 @@ import 'package:simple_table_grid/simple_table_grid.dart';
 
 class InfiniteScrollExample extends StatefulWidget {
   final bool useAutoRowExtent;
+  final int? initialRowCount;
   const InfiniteScrollExample({
     super.key,
     this.useAutoRowExtent = false,
+    this.initialRowCount,
   });
 
   @override
@@ -109,6 +111,7 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
         /// it take highest priority than other extents
         3: Extent.fixed(pixels: 40),
       },
+      initialRows: _mockInitialRows(),
     );
   }
 
@@ -308,6 +311,33 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
       debugPrint("Error mocking data: $e");
       return [];
     }
+  }
+
+  List<RowData> _mockInitialRows() {
+    if (widget.initialRowCount == null) {
+      return [];
+    }
+
+    final people = ExampleHelper.generateMockPeople(widget.initialRowCount!);
+
+    return people.map(
+      (e) {
+        final jsonData = e.toJson();
+
+        return RowData(
+          RowKey(e.key),
+          data: {
+            /// no matter if the column is displayed or not,
+            /// we still need to provide the data for it,
+            /// in case it is displayed later
+            ///
+            /// Otherwise, [TableCellDetail.data] will be null
+            for (final col in columnModels)
+              col.columnKey: jsonData[col.columnName],
+          },
+        );
+      },
+    ).toList();
   }
 
   /// As [CustomDataGridModel] is mutable,

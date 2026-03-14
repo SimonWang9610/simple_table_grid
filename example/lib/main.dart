@@ -39,6 +39,7 @@ class MyApp extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => InfiniteScrollExample(
                       useAutoRowExtent: true,
+                      initialRowCount: 100,
                     ),
                   ),
                 );

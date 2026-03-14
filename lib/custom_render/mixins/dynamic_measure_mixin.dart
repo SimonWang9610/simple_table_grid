@@ -8,85 +8,6 @@ mixin TableDynamicExtentMeasurerMixin
     on RenderTwoDimensionalViewport, TableViewportMetrics {
   (RenderBox?, bool) obtainCellForMeasurement(ChildVicinity vicinity);
 
-  final _dynamicRows = <int, Extent>{};
-
-  /// Measures the dynamic rows by laying out all cells in those rows to determine the max cell height,
-  /// it is quite expensively, as it will force to schedule a new layout pass after the measurement is done,
-  /// but it is necessary to support dynamic row height.
-  ///
-  bool measureDynamicRows() {
-    if (_dynamicRows.isEmpty) return false;
-
-    bool hasRowMeasured = false;
-
-    for (final entry in _dynamicRows.entries) {
-      final row = entry.key;
-      final rowExtent = entry.value;
-
-      if (row < 0 || row >= delegate.rowCount) {
-        continue;
-      }
-
-      if (rowExtent.isMeasured) continue;
-
-      double maxCellHeight = 0;
-
-      /// we need to layout all cells in this row to determine the max cell height,
-      /// which will be used as the row extent for dynamic row.
-      for (int column = 0; column < delegate.columnCount; column++) {
-        final columnSpan = getColumnSpan(column);
-
-        if (columnSpan == null) continue;
-
-        final vicinity = ChildVicinity(xIndex: column, yIndex: row);
-
-        final (cell, cached) = obtainCellForMeasurement(vicinity);
-
-        if (cell == null) continue;
-
-        hasRowMeasured = true;
-
-        final cellWidth = math.max(0.0, columnSpan.extent);
-        final (minHeight, maxHeight) = rowExtent.range;
-
-        cell.layout(
-          BoxConstraints(
-            minWidth: cellWidth,
-            maxWidth: cellWidth,
-            minHeight: minHeight,
-            maxHeight: maxHeight,
-          ),
-          parentUsesSize: true,
-        );
-
-        if (!cached) {
-          final data = parentDataOf(cell);
-
-          final columnLeading = getColumnSpan(column)?.leadingOffset ?? 0;
-          final rowLeading = getRowSpan(row - 1)?.trailingOffset ?? 0;
-
-          data.layoutOffset = Offset(
-            columnLeading + verticalBorderWidth,
-            rowLeading + horizontalBorderWidth,
-          );
-        }
-
-        maxCellHeight = math.max(maxCellHeight, cell.size.height);
-      }
-
-      rowExtent.acceptMeasurement(maxCellHeight);
-    }
-
-    assert(
-      _dynamicRows.values.every((extent) => extent.isMeasured),
-      "All dynamic rows should be measured after calling measureDynamicRows.",
-    );
-
-    _dynamicRows.clear();
-
-    return hasRowMeasured;
-  }
-
   bool measureHeaderRowIfNeeded() {
     final headerRowExtent = delegate.getRowExtent(0);
 
@@ -163,14 +84,97 @@ mixin TableDynamicExtentMeasurerMixin
     return headerRowMeasured;
   }
 
-  void markRowNeedsMeasurement(int row, Extent extent) {
-    if (row < 0 || row >= delegate.rowCount) {
-      return;
+  /// Measures the dynamic rows that are visible in the viewport,
+  /// returns true if at least one row is measured.
+  bool measureVisibleDynamicRows(int lastRow) {
+    final needMeasuredRows = <int, Extent>{};
+
+    for (int row = 0; row <= lastRow; row++) {
+      final extent = delegate.getRowExtent(row);
+
+      if (!extent.isMeasured) {
+        needMeasuredRows[row] = extent;
+      }
     }
 
-    assert(!extent.isMeasured,
-        'Cannot mark row $row for measurement with a measured extent.');
+    if (needMeasuredRows.isEmpty) {
+      return false;
+    }
 
-    _dynamicRows[row] = extent;
+    return _measureDynamicRows(needMeasuredRows);
+  }
+
+  /// Measures the dynamic rows by laying out all cells in those rows to determine the max cell height,
+  /// it is quite expensively, as it will force to schedule a new layout pass after the measurement is done,
+  /// but it is necessary to support dynamic row height.
+  bool _measureDynamicRows(Map<int, Extent> dynamicRows) {
+    if (dynamicRows.isEmpty) return false;
+
+    bool hasRowMeasured = false;
+
+    for (final entry in dynamicRows.entries) {
+      final row = entry.key;
+      final rowExtent = entry.value;
+
+      if (row < 0 || row >= delegate.rowCount) {
+        continue;
+      }
+
+      if (rowExtent.isMeasured) continue;
+
+      double maxCellHeight = 0;
+
+      /// we need to layout all cells in this row to determine the max cell height,
+      /// which will be used as the row extent for dynamic row.
+      for (int column = 0; column < delegate.columnCount; column++) {
+        final columnSpan = getColumnSpan(column);
+
+        if (columnSpan == null) continue;
+
+        final vicinity = ChildVicinity(xIndex: column, yIndex: row);
+
+        final (cell, cached) = obtainCellForMeasurement(vicinity);
+
+        if (cell == null) continue;
+
+        hasRowMeasured = true;
+
+        final cellWidth = math.max(0.0, columnSpan.extent);
+        final (minHeight, maxHeight) = rowExtent.range;
+
+        cell.layout(
+          BoxConstraints(
+            minWidth: cellWidth,
+            maxWidth: cellWidth,
+            minHeight: minHeight,
+            maxHeight: maxHeight,
+          ),
+          parentUsesSize: true,
+        );
+
+        if (!cached) {
+          final data = parentDataOf(cell);
+
+          final columnLeading = getColumnSpan(column)?.leadingOffset ?? 0;
+          final rowLeading = getRowSpan(row - 1)?.trailingOffset ?? 0;
+
+          data.layoutOffset = Offset(
+            columnLeading + verticalBorderWidth,
+            rowLeading + horizontalBorderWidth,
+          );
+        }
+
+        maxCellHeight = math.max(maxCellHeight, cell.size.height);
+      }
+
+      rowExtent.acceptMeasurement(maxCellHeight);
+    }
+
+    assert(
+      dynamicRows.values.every((extent) => extent.isMeasured),
+      "All dynamic rows should be measured after calling measureDynamicRows.",
+    );
+
+    return hasRowMeasured;
   }
 }
