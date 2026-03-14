@@ -25,7 +25,7 @@ class _AutoRowExtentExampleState extends State<AutoRowExtentExample> {
         HeaderData(key: _nameColumn, data: 'Name'),
         HeaderData(key: _notesColumn, data: 'Notes'),
       ],
-      defaultRowExtent: const Extent.fixed(25).auto(),
+      defaultRowExtent: Extent.auto(max: 100),
       defaultColumnExtent: const Extent.fixed(180),
       columnExtents: {
         _idColumn: const Extent.fixed(80),

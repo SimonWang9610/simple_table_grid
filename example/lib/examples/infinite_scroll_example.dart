@@ -100,16 +100,34 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
       columns: columns,
       pinnedColumns: pinnedColumns,
       defaultRowExtent: widget.useAutoRowExtent
-          ? const Extent.fixed(60).auto()
+          ? Extent.auto(max: 100)
           : const Extent.fixed(60),
-      defaultColumnExtent: Extent.range(pixels: 200, min: 100),
+      defaultColumnExtent: widget.useAutoRowExtent
+          ? Extent.auto(min: 80, max: 200)
+          : const Extent.range(
+              min: 80,
+              max: 200,
+              pixels: 100,
+            ),
       // defaultColumnExtent: Extent.range(pixels: 200, min: 100).auto(),
-      columnExtents: columnExtents,
+      columnExtents: widget.useAutoRowExtent ? null : columnExtents,
       rowExtents: {
         /// the 3rd data row will always have a fixed extent of 40,
         /// it take highest priority than other extents
         3: const Extent.fixed(40),
       },
+    );
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+
+    _tableController.sizer.rowExtents.forEach(
+      (index, extent) => extent.reset(),
+    );
+    _tableController.sizer.columnExtents.forEach(
+      (key, extent) => extent.reset(),
     );
   }
 
@@ -128,7 +146,8 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Infinite Scroll Example'),
+        title: Text(
+            'Infinite Scroll Example: ${widget.useAutoRowExtent ? "Auto Row Extent" : "Fixed Row Extent"}'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -198,10 +217,10 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
                         ),
                       ),
                       border: TableGridBorder(
-                        vertical: BorderSide(color: Colors.green, width: 1),
+                        vertical: BorderSide(color: Colors.green, width: 4),
                         horizontal: BorderSide(
                           color: Colors.red,
-                          width: 1,
+                          width: 4,
                         ),
                       ),
                     ),
@@ -403,13 +422,11 @@ class _HeaderWidgetState extends State<_HeaderWidget> {
         spacing: 5,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Flexible(
-            child: Center(
-              child: Text(
-                data.displayName ?? data.columnName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+          Center(
+            child: Text(
+              data.displayName ?? data.columnName,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),

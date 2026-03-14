@@ -103,7 +103,7 @@ class _PaginatedExampleState extends State<PaginatedExample> {
       columns: columns,
       pinnedColumns: pinnedColumns,
       defaultRowExtent: widget.useAutoRowExtent
-          ? const Extent.fixed(60).auto()
+          ? Extent.auto(max: 100)
           : const Extent.fixed(60),
       defaultColumnExtent: Extent.range(pixels: 200, min: 100),
       columnExtents: columnExtents,

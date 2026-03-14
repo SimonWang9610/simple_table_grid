@@ -8,7 +8,9 @@ import 'package:simple_table_grid/custom_render/layout_metrics.dart';
 import 'package:simple_table_grid/custom_render/mixins/base.dart';
 import 'package:simple_table_grid/custom_render/mixins/dynamic_measure_mixin.dart';
 import 'package:simple_table_grid/custom_render/mixins/table_grid_painting_mixin.dart';
+import 'package:simple_table_grid/simple_table_grid.dart';
 
+// TODO: reset all measured extents when reassemble, as the render object will be reused and the old measured extents may not be valid anymore.
 class RenderTableGridViewport extends RenderTwoDimensionalViewport
     with
         TableViewportMetrics,
@@ -62,6 +64,12 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
   @override
   CellLayoutExtentDelegate get delegate =>
       super.delegate as CellLayoutExtentDelegate;
+
+  // @override
+  // TableDynamicExtentMeasurer get extentMeasurer {
+  //   _extentMeasurer ??= TableDynamicExtentMeasurer(delegate.tableFinder);
+  //   return _extentMeasurer!;
+  // }
 
   int? get _lastPinnedRow =>
       delegate.pinnedRowCount > 0 ? delegate.pinnedRowCount - 1 : null;
@@ -117,7 +125,27 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
   void layoutChildSequence() {
     _builtVicinities.clear();
 
-    measureDynamicColumns();
+    // if (needsDelegateRebuild) {
+    //   _extentMeasurer?.dispose();
+    //   _extentMeasurer = null;
+    // }
+
+    print(
+        "===== Performing layout: needsMetricsRefresh: $_needsMetricsRefresh =====");
+
+    measureHeaderRowIfNeeded();
+
+    assert(
+      () {
+        for (int column = 0; column < delegate.columnCount; column++) {
+          final colExtent = delegate.getColumnExtent(column);
+          if (!colExtent.isMeasured) return false;
+        }
+
+        return true;
+      }(),
+      "all columns extents should be measured at this point",
+    );
 
     if (needsDelegateRebuild || didResize || _needsMetricsRefresh) {
       _columnMetrics.clear();
@@ -219,6 +247,9 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       _needsMetricsRefresh = true;
       _scheduleMetricsRefresh();
     }
+
+    print(
+        "===== Layout complete: scheduleMetricsRefresh: $hasRowMeasured =====");
   }
 
   void _layoutCells({
@@ -244,26 +275,26 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
         if (cell != null) {
           final data = parentDataOf(cell);
 
-          final cellWidth =
-              math.max(0.0, columnSpan.extent - verticalBorderWidth);
-          final cellHeight =
-              math.max(0.0, rowSpan.extent - horizontalBorderWidth);
+          final cellWidth = math.max(0.0, columnSpan.extent);
+          final cellHeight = math.max(0.0, rowSpan.extent);
 
-          final constraints = BoxConstraints.tightFor(
-            width: cellWidth,
-            height: cellHeight,
+          cell.layout(
+            BoxConstraints.tightFor(
+              width: cellWidth,
+              height: cellHeight,
+            ),
           );
 
-          cell.layout(constraints);
           data.layoutOffset = Offset(
             columnOffset + verticalBorderWidth,
             rowOffset + horizontalBorderWidth,
           );
         }
 
-        columnOffset += columnSpan.extent;
+        columnOffset += columnSpan.extent + verticalBorderWidth;
       }
-      rowOffset += rowSpan.extent;
+
+      rowOffset += rowSpan.extent + horizontalBorderWidth;
     }
   }
 
@@ -284,8 +315,10 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       final span = _columnMetrics.remove(column) ?? Span();
       final hExtent = delegate.getColumnExtent(column);
 
-      assert(!hExtent.isDynamic,
-          "all dynamic column should have been measured at this point");
+      assert(
+        hExtent.isMeasured,
+        "all dynamic column should have been measured at this point",
+      );
 
       span.update(
         leadingOffset: leadingOffset,
@@ -309,7 +342,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
         "No available space for pinned columns",
       );
 
-      final leadingOffset = startOfPinnedColumn;
+      final leadingOffset = startOfPinnedColumn + verticalBorderWidth;
       final span = updateSpan(currentColumn, true, leadingOffset);
 
       remainingSpace -= span.extent;
@@ -323,7 +356,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
 
     /// Non pinned columns
     while (currentColumn < delegate.columnCount) {
-      final leadingOffset = startOfRegularColumn;
+      final leadingOffset = startOfRegularColumn + verticalBorderWidth;
 
       final span = updateSpan(currentColumn, false, leadingOffset);
 
@@ -345,6 +378,10 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
     );
   }
 
+  /// as estimating row metrics will iterate all rows,
+  /// so we should not measure dynamic rows during this.
+  /// Instead, we will schedule a post-frame callback to apply the measurement
+  /// after the current layout complete.
   void _updateRowMetrics() {
     assert(
       _rowMetrics.isRangeEmpty,
@@ -360,13 +397,17 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
 
     Span updateSpan(int row, bool isPinned, double leadingOffset) {
       final span = _rowMetrics.remove(row) ?? Span();
-      final vExtent = delegate.getRowExtent(row);
+      Extent vExtent = delegate.getRowExtent(row);
 
       /// If the row extent is dynamic, we need to measure the cells in that row to determine the actual extent.
       /// We will schedule a post-frame callback to do that after the layout is complete,
       /// as we cannot [markNeedsLayout] during performLayout.
-      if (vExtent.isDynamic) {
-        markRowNeedsMeasurement(row);
+      if (!vExtent.isMeasured) {
+        markRowNeedsMeasurement(row, vExtent);
+
+        /// for this layout pass, we refer to the header row's extent for dynamic rows,
+        /// as it is the only row that is measured before computing row metrics,
+        vExtent = delegate.getRowExtent(0);
       }
 
       span.update(
@@ -391,7 +432,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
         "No available space for remaining pinned rows",
       );
 
-      final leadingOffset = startOfPinnedRow;
+      final leadingOffset = startOfPinnedRow + horizontalBorderWidth;
       final span = updateSpan(currentRow, true, leadingOffset);
 
       remainingSpace -= span.extent;
@@ -405,7 +446,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
 
     /// Non pinned rows
     while (currentRow < delegate.rowCount) {
-      final leadingOffset = startOfRegularRow;
+      final leadingOffset = startOfRegularRow + horizontalBorderWidth;
 
       final span = updateSpan(currentRow, false, leadingOffset);
 

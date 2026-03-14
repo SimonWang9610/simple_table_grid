@@ -44,14 +44,6 @@ final class TableExtentController extends TableSizer
     Map<ColumnKey, Extent>? columnExtents,
   })  : _defaultRowExtent = defaultRowExtent,
         _defaultColumnExtent = defaultColumnExtent {
-    // assert(!defaultColumnExtent.isDynamic,
-    //     'Default column extent cannot be dynamic.');
-
-    // assert(
-    //     columnExtents == null ||
-    //         !columnExtents.values.any((extent) => extent.isDynamic),
-    //     "Column extents cannot be dynamic.");
-
     if (rowExtents != null) {
       _mutatedRowExtents.addAll(rowExtents);
     }
@@ -94,7 +86,11 @@ final class TableExtentController extends TableSizer
 
   @override
   Extent getRowExtent(int index) {
-    return _mutatedRowExtents[index] ?? _defaultRowExtent;
+    if (!_mutatedRowExtents.containsKey(index)) {
+      _mutatedRowExtents[index] = _defaultRowExtent.clone();
+    }
+
+    return _mutatedRowExtents[index]!;
   }
 
   @override
@@ -105,7 +101,11 @@ final class TableExtentController extends TableSizer
   }
 
   Extent _getColumnExtent(ColumnKey key) {
-    return _mutatedColumnExtents[key] ?? _defaultColumnExtent;
+    if (!_mutatedColumnExtents.containsKey(key)) {
+      _mutatedColumnExtents[key] = _defaultColumnExtent.clone();
+    }
+
+    return _mutatedColumnExtents[key]!;
   }
 
   @override
