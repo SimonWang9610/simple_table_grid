@@ -125,14 +125,6 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
   void layoutChildSequence() {
     _builtVicinities.clear();
 
-    // if (needsDelegateRebuild) {
-    //   _extentMeasurer?.dispose();
-    //   _extentMeasurer = null;
-    // }
-
-    print(
-        "===== Performing layout: needsMetricsRefresh: $_needsMetricsRefresh =====");
-
     measureHeaderRowIfNeeded();
 
     assert(
@@ -167,12 +159,16 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
 
     final offsetIntoColumn = _columnMetrics.getNonPinnedOffset(
       horizontalOffset.pixels,
-      _pinnedColumnsExtent,
+
+      /// As the border is shared by adjacent cells, we only subtract one time to avoid double counting.
+      _pinnedColumnsExtent - verticalBorderWidth,
     );
 
     final offsetIntoRow = _rowMetrics.getNonPinnedOffset(
       verticalOffset.pixels,
-      _pinnedRowsExtent,
+
+      /// As the border is shared by adjacent cells, we only subtract one time to avoid double counting.
+      _pinnedRowsExtent - horizontalBorderWidth,
     );
 
     // +----------+------------------+
@@ -247,9 +243,6 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
       _needsMetricsRefresh = true;
       _scheduleMetricsRefresh();
     }
-
-    print(
-        "===== Layout complete: scheduleMetricsRefresh: $hasRowMeasured =====");
   }
 
   void _layoutCells({

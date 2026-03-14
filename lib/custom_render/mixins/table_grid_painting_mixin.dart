@@ -25,12 +25,17 @@ mixin TableGridPaintingMixin on TableViewportMetrics {
 
     final startX =
         getColumnSpan(start.xIndex)!.leadingOffset + columnTranslation;
-    final endX = getColumnSpan(end.xIndex)!.trailingOffset + columnTranslation;
+    final endX = getColumnSpan(end.xIndex)!.trailingOffset +
+        columnTranslation +
+        verticalBorderWidth;
     final startY = getRowSpan(start.yIndex)!.leadingOffset + rowTranslation;
-    final endY = getRowSpan(end.yIndex)!.trailingOffset + rowTranslation;
+    final endY = getRowSpan(end.yIndex)!.trailingOffset +
+        rowTranslation +
+        horizontalBorderWidth;
     final clipBounds = canvas.getLocalClipBounds();
     final clippedEndX = math.min(endX, clipBounds.right - offset.dx);
     final clippedEndY = math.min(endY, clipBounds.bottom - offset.dy);
+    print("ClippedX: $clippedEndX/$endX, ClippedY: $clippedEndY/$endY");
 
     if (verticalBorderWidth > 0) {
       final verticalPaint = Paint()

@@ -217,10 +217,10 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
                         ),
                       ),
                       border: TableGridBorder(
-                        vertical: BorderSide(color: Colors.green, width: 4),
+                        vertical: BorderSide(color: Colors.green, width: 8),
                         horizontal: BorderSide(
                           color: Colors.red,
-                          width: 4,
+                          width: 8,
                         ),
                       ),
                     ),
@@ -422,12 +422,11 @@ class _HeaderWidgetState extends State<_HeaderWidget> {
         spacing: 5,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Center(
+          Flexible(
             child: Text(
-              data.displayName ?? data.columnName,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              data.columnName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           InkWell(

@@ -21,8 +21,5 @@ double _extractBorderWidth(BorderSide side) {
     return 0;
   }
 
-  return switch (side.strokeAlign) {
-    BorderSide.strokeAlignInside => side.width,
-    _ => side.width / 2,
-  };
+  return side.width;
 }
