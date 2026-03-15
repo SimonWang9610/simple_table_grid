@@ -12,20 +12,22 @@ class ExampleHelper {
       {String? keyword}) async {
     await Future.delayed(const Duration(milliseconds: 300));
 
-    final people = List.generate(
-      limit,
+    return generateMockPeople(limit);
+  }
+
+  static List<MockPersonInfo> generateMockPeople(int count) {
+    return List.generate(
+      count,
       (index) => MockPersonInfo(
         key: _fake.guid.guid(),
         surname: _fake.person.lastName(),
-        givenName: "${_fake.person.firstName()}${keyword ?? ""}",
+        givenName: _fake.person.firstName(),
         phoneNumber: _fake.phoneNumber.us(),
-        cardAssignments: "<Card Assignments>",
-        badgeType: "<Badge Type>",
-        tags: "<Tags>",
+        cardAssignments: _fake.lorem.sentence(),
+        badgeType: _fake.lorem.word(),
+        tags: _fake.lorem.words(3).join(", "),
       ),
     );
-
-    return people;
   }
 
   static Future<void> saveFile(List<int> bytes, String fileName) async {

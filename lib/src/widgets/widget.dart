@@ -64,6 +64,14 @@ class _TableGridState extends State<TableGrid> {
       widget.verticalScrollController ??
       (_verticalFallbackController ??= ScrollController());
 
+  /// Reset all extents when hot reloading to ensure the extents are consistent
+  /// with the current state of the table.
+  @override
+  void reassemble() {
+    widget.controller.sizer.resetAllExtents();
+    super.reassemble();
+  }
+
   @override
   void dispose() {
     _horizontalFallbackController?.dispose();
