@@ -129,7 +129,8 @@ final class _FixedExtent extends Extent {
       identical(this, other) ||
       other is _FixedExtent &&
           runtimeType == other.runtimeType &&
-          _pixels == other._pixels;
+          _pixels == other._pixels &&
+          pixels == other.pixels;
 
   @override
   String toString() {

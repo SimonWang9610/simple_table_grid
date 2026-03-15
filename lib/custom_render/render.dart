@@ -42,6 +42,7 @@ class RenderTableGridViewport extends RenderTwoDimensionalViewport
     }
 
     _verticalBorderSide = value;
+    _needsMetricsRefresh = true;
     markNeedsLayout();
     markNeedsPaint();
   }
