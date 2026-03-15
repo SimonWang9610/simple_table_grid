@@ -109,21 +109,9 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
       rowExtents: {
         /// the 3rd data row will always have a fixed extent of 40,
         /// it take highest priority than other extents
-        3: Extent.fixed(pixels: 40),
+        3: Extent.fixed(),
       },
       initialRows: _mockInitialRows(),
-    );
-  }
-
-  @override
-  void reassemble() {
-    super.reassemble();
-
-    _tableController.sizer.rowExtents.forEach(
-      (index, extent) => extent.reset(),
-    );
-    _tableController.sizer.columnExtents.forEach(
-      (key, extent) => extent.reset(),
     );
   }
 
@@ -250,7 +238,7 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
         ),
         ElevatedButton(
           onPressed: () {
-            _loadMore(10);
+            _loadMore(3);
           },
           child: const Text("Load More (10)"),
         ),

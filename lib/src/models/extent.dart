@@ -8,7 +8,7 @@ abstract interface class ExtentMeasurable {
   /// Reset the measured pixels to the initial state.
   /// If the extent has been given initial pixels, it will reset to the initial pixels;
   /// otherwise, it will reset to null, and the extent will be measured again when needed.
-  void reset();
+  // void reset();
 
   /// Set the measured pixels for this extent.
   /// This method will be called when the extent is measured with actual pixels.
@@ -66,6 +66,10 @@ sealed class Extent implements ExtentMeasurable {
   /// For [Extent.ranged], it will apply the delta to the current pixels within the valid range defined by min and max,
   bool accept(double delta);
 
+  /// Create a copy of this extent with the same properties.
+  /// But the dynamic measurement state will be reset to the initial state,
+  /// which means if the original extent is measured,
+  /// the cloned extent will be unmeasured until it is measured again with actual pixels.
   Extent clone();
 }
 
@@ -112,10 +116,10 @@ final class _FixedExtent extends Extent {
   @override
   Extent clone() => _FixedExtent(pixels: pixels);
 
-  @override
-  void reset() {
-    _pixels = pixels;
-  }
+  // @override
+  // void reset() {
+  //   _pixels = pixels;
+  // }
 
   @override
   int get hashCode => _pixels.hashCode;
@@ -200,10 +204,10 @@ final class _RangeExtent extends Extent {
   @override
   Extent clone() => _RangeExtent(min: min, max: max, pixels: pixels);
 
-  @override
-  void reset() {
-    _pixels = pixels;
-  }
+  // @override
+  // void reset() {
+  //   _pixels = pixels;
+  // }
 
   @override
   int get hashCode => Object.hash(min, max, pixels, _pixels);
