@@ -51,7 +51,21 @@ abstract base class TableController with ChangeNotifier {
     List<RowData>? appendedRows,
   });
 
-  void _notify() {
+  List<TableControllerCoordinator> get coordinators;
+
+  void dispatch<T extends CoordinatorCommand>(T command) {
+    for (final coordinator in coordinators) {
+      if (coordinator.execute(command)) {
+        break;
+      }
+    }
+  }
+
+  void _notify<T extends CoordinatorCommand>([T? command]) {
+    if (command != null) {
+      dispatch(command);
+    }
+
     notifyListeners();
   }
 
@@ -161,8 +175,25 @@ mixin TableControllerCoordinator on ChangeNotifier {
     _controller = controller;
   }
 
-  void notify() {
-    _controller?._notify();
+  /// Notify the coordinator with a [CoordinatorCommand].
+  /// The coordinator can then perform certain actions based on the type of the command.
+  ///
+  /// It is designed to let coordinators communicate with each other without creating a direct dependency between them.
+  ///
+  /// By default, it does nothing, but it can be overridden by coordinators to handle specific commands.
+  bool execute<T extends CoordinatorCommand>(T command) => false;
+
+  /// Sends a command to the controller that will dispatch it to the coordinators.
+  /// This is useful for notifying other coordinators about certain actions or events.
+  ///
+  /// 1. [notify]
+  /// 2. [TableController._notify]
+  /// 3. [TableController.dispatchCommand]
+  /// 4. iterate coordinators and call [TableControllerCoordinator.execute] for each coordinator until one of them returns true,
+  /// which means the command is handled.
+  void notify([ResetExtentCommand? command]) {
+    _controller?._notify(command);
+
     notifyListeners();
   }
 
@@ -225,6 +256,9 @@ final class _ControllerImpl extends TableController
       hoveringStrategies: hoveringStrategies,
     );
   }
+
+  @override
+  List<TableControllerCoordinator> get coordinators => [extent, data, header];
 
   @override
   void dispose() {
@@ -382,6 +416,9 @@ final class _PaginatedControllerImpl extends TableController
       hoveringStrategies: hoveringStrategies,
     );
   }
+
+  @override
+  List<TableControllerCoordinator> get coordinators => [extent, data, header];
 
   @override
   void dispose() {

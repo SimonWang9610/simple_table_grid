@@ -16,8 +16,6 @@ mixin CellLayoutExtentDelegate on TwoDimensionalChildDelegate {
 
   Extent getColumnExtent(int index);
   Extent getRowExtent(int index);
-
-  TableIndexFinder get tableFinder;
 }
 
 typedef DynamicExtentFlusher = void Function(Map<int, Extent> changedExtents);
@@ -26,9 +24,6 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     with CellLayoutExtentDelegate {
   final CellExtentBuilder rowExtentBuilder;
   final CellExtentBuilder columnExtentBuilder;
-
-  @override
-  final TableIndexFinder tableFinder;
 
   int _pinnedColumnCount = 0;
   int _pinnedRowCount = 0;
@@ -43,7 +38,6 @@ class TableGridCellBuilderDelegate extends TwoDimensionalChildBuilderDelegate
     required super.builder,
     required this.rowExtentBuilder,
     required this.columnExtentBuilder,
-    required this.tableFinder,
   })  : assert(pinnedColumnCount >= 0),
         assert(pinnedRowCount >= 0),
         assert(rowCount >= 0),

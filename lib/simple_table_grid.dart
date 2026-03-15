@@ -7,6 +7,7 @@ export 'src/models/table_grid_border.dart';
 export 'src/models/extent.dart';
 export 'src/models/row_update.dart';
 export 'src/models/exporter.dart';
+export 'src/models/command.dart';
 
 export "src/widgets/widget.dart";
 export 'src/widgets/theme_data.dart';

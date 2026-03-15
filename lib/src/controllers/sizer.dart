@@ -24,7 +24,7 @@ abstract interface class TableSizer with ChangeNotifier {
   ///
   /// NOTE: resized column extent will also be reset by this method,
   /// because the resized extent is stored in the column extent map, which will be cleared by this method.
-  void resetColumnExtent(ColumnKey key);
+  void resetColumnExtent(ColumnKey key, {bool shouldNotify = true});
 
   /// reset the extent for the row with the given [index] or [key] to the provided row extent,
   /// which either the extent from the extent map or the default row extent.
@@ -36,7 +36,7 @@ abstract interface class TableSizer with ChangeNotifier {
   ///
   /// NOTE: resized row extent will also be reset by this method,
   /// because the resized extent is stored in the row extent map, which will be cleared by
-  void resetRowExtent({RowKey? key, int? index});
+  void resetRowExtent({RowKey? key, int? index, bool shouldNotify = true});
 
   /// reset all column and row extents to the initial state.
   ///
@@ -45,7 +45,7 @@ abstract interface class TableSizer with ChangeNotifier {
   ///
   /// NOTE: all resized results will also be reset by this method,
   /// because the resized extents are stored in the column and row extent maps, which will be cleared by this method.
-  void resetAllExtents();
+  void resetAllExtents({bool shouldNotify = true});
 
   /// Resize the [ResizeTarget] set by [setResizeTarget] by the given [delta].
   ///
@@ -159,16 +159,16 @@ final class TableExtentController extends TableSizer
   }
 
   @override
-  void resetColumnExtent(ColumnKey key) {
+  void resetColumnExtent(ColumnKey key, {bool shouldNotify = true}) {
     final removed = _columnExtents.remove(key);
 
-    if (removed) {
+    if (removed && shouldNotify) {
       notify();
     }
   }
 
   @override
-  void resetRowExtent({RowKey? key, int? index}) {
+  void resetRowExtent({RowKey? key, int? index, bool shouldNotify = true}) {
     bool changed = false;
 
     if (index != null) {
@@ -188,13 +188,13 @@ final class TableExtentController extends TableSizer
       changed = _rowExtents.remove(key) || changed;
     }
 
-    if (changed) {
+    if (changed && shouldNotify) {
       notify();
     }
   }
 
   @override
-  void resetAllExtents() {
+  void resetAllExtents({bool shouldNotify = true}) {
     final changed = _headerRowExtent != null ||
         !_rowExtents.isEmpty ||
         !_columnExtents.isEmpty;
@@ -203,9 +203,30 @@ final class TableExtentController extends TableSizer
     _rowExtents.clear();
     _columnExtents.clear();
 
-    if (changed) {
+    if (changed && shouldNotify) {
       notify();
     }
+  }
+
+  @override
+  bool execute<T extends CoordinatorCommand>(T command) {
+    if (command is! ResetExtentCommand) {
+      return false;
+    }
+
+    if (!command.isAnyReset) return true;
+
+    if (command.resetAllColumns || command.resetAllRows) {
+      resetAllExtents(shouldNotify: false);
+    }
+
+    for (final evictedKey in command.evictedRowKeys) {
+      resetRowExtent(key: evictedKey, shouldNotify: false);
+    }
+
+    notifyListeners();
+
+    return true;
   }
 
   ResizeTarget? _target;
