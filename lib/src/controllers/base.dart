@@ -61,11 +61,7 @@ abstract base class TableController with ChangeNotifier {
     }
   }
 
-  void _notify<T extends CoordinatorCommand>([T? command]) {
-    if (command != null) {
-      dispatch(command);
-    }
-
+  void _notify() {
     notifyListeners();
   }
 
@@ -192,7 +188,11 @@ mixin TableControllerCoordinator on ChangeNotifier {
   /// 4. iterate coordinators and call [TableControllerCoordinator.execute] for each coordinator until one of them returns true,
   /// which means the command is handled.
   void notify([ResetExtentCommand? command]) {
-    _controller?._notify(command);
+    _controller?._notify();
+
+    if (command != null) {
+      _controller?.dispatch(command);
+    }
 
     notifyListeners();
   }
