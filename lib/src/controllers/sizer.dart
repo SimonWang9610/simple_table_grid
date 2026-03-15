@@ -75,18 +75,19 @@ final class TableExtentController extends TableSizer
   Extent _defaultRowExtent;
   Extent _defaultColumnExtent;
 
-  /// TODO: reset rows that rely on the default row extent when the default row extent changes
   set defaultRowExtent(Extent value) {
     if (_defaultRowExtent == value) return;
 
+    _headerRowExtent = null;
+    _rowExtents.clear();
     _defaultRowExtent = value;
+
     notify();
   }
 
-  /// TODO: reset columns that rely on the default column extent when the default column extent changes
   set defaultColumnExtent(Extent value) {
     if (_defaultColumnExtent == value) return;
-
+    _columnExtents.clear();
     _defaultColumnExtent = value;
     notify();
   }
