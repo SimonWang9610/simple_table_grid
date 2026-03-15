@@ -321,6 +321,91 @@ void main() {
       fixture.sizer.dispose();
     });
   });
+
+  group('integration with TableController', () {
+    TableController createController() {
+      return TableController(
+        columns: [
+          HeaderData(key: colA, data: 'A'),
+          HeaderData(key: colB, data: 'B'),
+        ],
+        initialRows: [
+          RowData(
+            rowA,
+            data: {
+              colA: 'r1a',
+              colB: 'r1b',
+            },
+          ),
+          RowData(
+            rowB,
+            data: {
+              colA: 'r2a',
+              colB: 'r2b',
+            },
+          ),
+        ],
+        defaultRowExtent: Extent.ranged(min: 10, max: 200, pixels: 30),
+        defaultColumnExtent: Extent.ranged(min: 40, max: 300, pixels: 80),
+        rowExtents: {
+          1: Extent.ranged(min: 10, max: 200, pixels: 55),
+        },
+        columnExtents: {
+          colA: Extent.ranged(min: 40, max: 300, pixels: 120),
+        },
+      );
+    }
+
+    test('public sizer reset APIs work through controller facade', () {
+      final controller = createController();
+      final sizer = controller.sizer;
+
+      final rowBefore = sizer.getRowExtent(1);
+      final columnBefore = sizer.getColumnExtent(0);
+
+      sizer.resetRowExtent(index: 1);
+      sizer.resetColumnExtent(colA);
+
+      final rowAfter = sizer.getRowExtent(1);
+      final columnAfter = sizer.getColumnExtent(0);
+
+      expect(identical(rowAfter, rowBefore), isFalse);
+      expect(identical(columnAfter, columnBefore), isFalse);
+
+      controller.dispose();
+    });
+
+    test('default extent setters invalidate caches in controller-backed sizer',
+        () {
+      final controller = createController();
+      final sizer = controller.sizer as TableExtentController;
+
+      final headerBefore = sizer.getRowExtent(0);
+      final rowBefore = sizer.getRowExtent(1);
+      final defaultRowBefore = sizer.getRowExtent(2);
+      final colBefore = sizer.getColumnExtent(0);
+      final defaultColBefore = sizer.getColumnExtent(1);
+
+      sizer.defaultRowExtent = Extent.ranged(min: 10, max: 200, pixels: 70);
+      sizer.defaultColumnExtent = Extent.ranged(min: 40, max: 300, pixels: 140);
+
+      final headerAfter = sizer.getRowExtent(0);
+      final rowAfter = sizer.getRowExtent(1);
+      final defaultRowAfter = sizer.getRowExtent(2);
+      final colAfter = sizer.getColumnExtent(0);
+      final defaultColAfter = sizer.getColumnExtent(1);
+
+      expect(identical(headerAfter, headerBefore), isFalse);
+      expect(identical(rowAfter, rowBefore), isFalse);
+      expect(identical(defaultRowAfter, defaultRowBefore), isFalse);
+      expect(identical(colAfter, colBefore), isFalse);
+      expect(identical(defaultColAfter, defaultColBefore), isFalse);
+      expect(defaultRowAfter.range.$1, 70);
+      expect(defaultColAfter.range.$1, 140);
+
+      controller.dispose();
+    });
+  });
 }
 
 final class _Fixture {
