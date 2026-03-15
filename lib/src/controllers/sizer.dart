@@ -159,33 +159,52 @@ final class TableExtentController extends TableSizer
 
   @override
   void resetColumnExtent(ColumnKey key) {
-    _columnExtents.remove(key);
+    final removed = _columnExtents.remove(key);
+
+    if (removed) {
+      notify();
+    }
   }
 
   @override
   void resetRowExtent({RowKey? key, int? index}) {
+    bool changed = false;
+
     if (index != null) {
       if (index == 0) {
+        changed = _headerRowExtent != null || changed;
         _headerRowExtent = null;
       } else {
         final rowKey = finder.getRowKey(index);
 
         if (rowKey != null) {
-          _rowExtents.remove(rowKey);
+          changed = _rowExtents.remove(rowKey) || changed;
         }
       }
     }
 
     if (key != null) {
-      _rowExtents.remove(key);
+      changed = _rowExtents.remove(key) || changed;
+    }
+
+    if (changed) {
+      notify();
     }
   }
 
   @override
   void resetAllExtents() {
+    final changed = _headerRowExtent != null ||
+        !_rowExtents.isEmpty ||
+        !_columnExtents.isEmpty;
+
     _headerRowExtent = null;
     _rowExtents.clear();
     _columnExtents.clear();
+
+    if (changed) {
+      notify();
+    }
   }
 
   ResizeTarget? _target;
@@ -220,7 +239,11 @@ final class TableExtentController extends TableSizer
         ? finder.previousColumn(columnKey)
         : columnKey;
 
-    if (actualKey == null) return;
+    if (actualKey == null || finder.getColumnIndex(actualKey) == null) {
+      setResizeTarget(null);
+      return;
+    }
+
     final extent = _getColumnExtent(actualKey);
 
     final accepted = extent.accept(delta);
@@ -234,7 +257,17 @@ final class TableExtentController extends TableSizer
     final actualKey =
         direction == ResizeDirection.up ? finder.previousRow(rowKey) : rowKey;
 
-    final index = actualKey != null ? finder.getRowIndex(actualKey) : 0;
+    if (actualKey == null) {
+      setResizeTarget(null);
+      return;
+    }
+
+    final index = finder.getRowIndex(actualKey);
+
+    if (index <= 0) {
+      setResizeTarget(null);
+      return;
+    }
 
     final extent = getRowExtent(index);
 
@@ -258,6 +291,8 @@ final class TableExtentController extends TableSizer
 class _ExtentCache<T extends TableKey> {
   final Map<T, Extent> _cache = {};
 
+  bool get isEmpty => _cache.isEmpty;
+
   Extent get(T key, {required Extent Function() ifAbsent}) {
     return _cache.putIfAbsent(key, ifAbsent);
   }
@@ -266,8 +301,8 @@ class _ExtentCache<T extends TableKey> {
     _cache[key] = extent;
   }
 
-  void remove(T key) {
-    _cache.remove(key);
+  bool remove(T key) {
+    return _cache.remove(key) != null;
   }
 
   void clear() {

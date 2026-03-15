@@ -419,7 +419,7 @@ class _HeaderWidget extends StatefulWidget {
 }
 
 class _HeaderWidgetState extends State<_HeaderWidget> {
-  bool _ascending = true;
+  bool _ascending = false;
 
   @override
   Widget build(BuildContext context) {
