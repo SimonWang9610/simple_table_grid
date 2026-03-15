@@ -168,7 +168,11 @@ final class TableExtentController extends TableSizer
       if (index == 0) {
         _headerRowExtent = null;
       } else {
-        _rowExtents.remove(finder.getRowKey(index)!);
+        final rowKey = finder.getRowKey(index);
+
+        if (rowKey != null) {
+          _rowExtents.remove(rowKey);
+        }
       }
     }
 
