@@ -8,7 +8,7 @@ abstract interface class ExtentMeasurable {
   /// Reset the measured pixels to the initial state.
   /// If the extent has been given initial pixels, it will reset to the initial pixels;
   /// otherwise, it will reset to null, and the extent will be measured again when needed.
-  // void reset();
+  void resetMeasurement();
 
   /// Set the measured pixels for this extent.
   /// This method will be called when the extent is measured with actual pixels.
@@ -64,7 +64,7 @@ sealed class Extent implements ExtentMeasurable {
   ///
   /// For [Extent.fixed], it will ignore the delta and return itself directly since the extent is fixed.
   /// For [Extent.ranged], it will apply the delta to the current pixels within the valid range defined by min and max,
-  bool accept(double delta);
+  bool resize(double delta);
 
   /// Create a copy of this extent with the same properties.
   /// But the dynamic measurement state will be reset to the initial state,
@@ -98,7 +98,7 @@ final class _FixedExtent extends Extent {
   }
 
   @override
-  bool accept(double delta) => false;
+  bool resize(double delta) => false;
 
   @override
   bool get isMeasured => _pixels != null;
@@ -116,10 +116,10 @@ final class _FixedExtent extends Extent {
   @override
   Extent clone() => _FixedExtent(pixels: pixels);
 
-  // @override
-  // void reset() {
-  //   _pixels = pixels;
-  // }
+  @override
+  void resetMeasurement() {
+    _pixels = pixels;
+  }
 
   @override
   int get hashCode => _pixels.hashCode;
@@ -168,10 +168,10 @@ final class _RangeExtent extends Extent {
         'Extent must be measured before calculating the layout extent');
 
     if (!pinned) {
-      return _pixels ?? 0;
+      return _constrainedPixels;
     }
 
-    final allowed = math.min(_pixels ?? 0, remainingSpace);
+    final allowed = math.min(_constrainedPixels, remainingSpace);
     return allowed >= 0 ? allowed : 0;
   }
 
@@ -184,17 +184,25 @@ final class _RangeExtent extends Extent {
     return this;
   }
 
+  double get _constrainedPixels {
+    final resized = (_pixels ?? 0) + (_accumulatedDelta ?? 0);
+
+    return resized.clamp(min, max);
+  }
+
+  double? _accumulatedDelta;
+
   @override
-  bool accept(double delta) {
+  bool resize(double delta) {
     assert(isMeasured, 'Extent must be measured before accepting changes');
 
-    final newPixels = (_pixels ?? 0) + delta;
+    final newPixels = _constrainedPixels + delta;
 
     if (newPixels < min || newPixels > max) {
       return false;
     }
 
-    _pixels = newPixels;
+    _accumulatedDelta = (_accumulatedDelta ?? 0) + delta;
 
     return true;
   }
@@ -205,10 +213,10 @@ final class _RangeExtent extends Extent {
   @override
   Extent clone() => _RangeExtent(min: min, max: max, pixels: pixels);
 
-  // @override
-  // void reset() {
-  //   _pixels = pixels;
-  // }
+  @override
+  void resetMeasurement() {
+    _pixels = pixels;
+  }
 
   @override
   int get hashCode => Object.hash(min, max, pixels, _pixels);
@@ -221,7 +229,8 @@ final class _RangeExtent extends Extent {
           min == other.min &&
           max == other.max &&
           pixels == other.pixels &&
-          _pixels == other._pixels;
+          _pixels == other._pixels &&
+          _accumulatedDelta == other._accumulatedDelta;
 
   @override
   String toString() {

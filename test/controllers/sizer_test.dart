@@ -53,7 +53,7 @@ void main() {
       expect(identical(first, second), isTrue);
       expect(identical(first, fixture.rowInitial[1]), isFalse);
 
-      first.accept(10);
+      first.resize(10);
       expect(fixture.rowInitial[1]!.range.$1, 50);
 
       fixture.sizer.dispose();
@@ -78,7 +78,7 @@ void main() {
       expect(identical(first, second), isTrue);
       expect(identical(first, fixture.columnInitial[colA]), isFalse);
 
-      first.accept(10);
+      first.resize(10);
       expect(fixture.columnInitial[colA]!.range.$1, 120);
 
       fixture.sizer.dispose();

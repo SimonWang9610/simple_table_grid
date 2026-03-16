@@ -22,9 +22,11 @@ abstract interface class TableSizer with ChangeNotifier {
   /// For example, during hot-reloading, we want to reset the column extents to ensure the column is measured again if needed,
   /// because the column data may change during development, which can lead to different layout results for the column
   ///
-  /// NOTE: resized column extent will also be reset by this method,
-  /// because the resized extent is stored in the column extent map, which will be cleared by this method.
-  void resetColumnExtent(ColumnKey key, {bool shouldNotify = true});
+  /// It only reset the measured pixels to the initial state, which means the resized result will be kept after reset.
+  void resetColumnExtent(
+    ColumnKey key, {
+    bool shouldNotify = true,
+  });
 
   /// reset the extent for the row with the given [index] or [key] to the provided row extent,
   /// which either the extent from the extent map or the default row extent.
@@ -34,17 +36,19 @@ abstract interface class TableSizer with ChangeNotifier {
   /// For example, during hot-reloading, we want to reset the row extents to ensure the row is measured again if needed,
   /// because the row data may change during development, which can lead to different layout results for the row
   ///
-  /// NOTE: resized row extent will also be reset by this method,
-  /// because the resized extent is stored in the row extent map, which will be cleared by
-  void resetRowExtent({RowKey? key, int? index, bool shouldNotify = true});
+  /// It only reset the measured pixels to the initial state, which means the resized result will be kept after reset.
+  void resetRowExtent({
+    RowKey? key,
+    int? index,
+    bool shouldNotify = true,
+  });
 
   /// reset all column and row extents to the initial state.
   ///
   /// For example, during hot-reloading, we want to reset all extents to ensure the table is measured again if needed,
   /// because the table data may change during development, which can lead to different layout results for the table.
   ///
-  /// NOTE: all resized results will also be reset by this method,
-  /// because the resized extents are stored in the column and row extent maps, which will be cleared by this method.
+  /// It only reset the measured pixels to the initial state, which means the resized result will be kept after reset.
   void resetAllExtents({bool shouldNotify = true});
 
   /// Resize the [ResizeTarget] set by [setResizeTarget] by the given [delta].
@@ -160,9 +164,9 @@ final class TableExtentController extends TableSizer
 
   @override
   void resetColumnExtent(ColumnKey key, {bool shouldNotify = true}) {
-    final removed = _columnExtents.remove(key);
+    _columnExtents.resetMeasurement(key);
 
-    if (removed && shouldNotify) {
+    if (shouldNotify) {
       notify();
     }
   }
@@ -173,19 +177,21 @@ final class TableExtentController extends TableSizer
 
     if (index != null) {
       if (index == 0) {
-        changed = _headerRowExtent != null || changed;
-        _headerRowExtent = null;
+        _headerRowExtent?.resetMeasurement();
+        changed = true;
       } else {
         final rowKey = finder.getRowKey(index);
 
         if (rowKey != null) {
-          changed = _rowExtents.remove(rowKey) || changed;
+          _rowExtents.resetMeasurement(rowKey);
+          changed = true;
         }
       }
     }
 
     if (key != null) {
-      changed = _rowExtents.remove(key) || changed;
+      _rowExtents.resetMeasurement(key);
+      changed = true;
     }
 
     if (changed && shouldNotify) {
@@ -199,9 +205,9 @@ final class TableExtentController extends TableSizer
         !_rowExtents.isEmpty ||
         !_columnExtents.isEmpty;
 
-    _headerRowExtent = null;
-    _rowExtents.clear();
-    _columnExtents.clear();
+    _headerRowExtent?.resetMeasurement();
+    _rowExtents.resetAllMeasurement();
+    _columnExtents.resetAllMeasurement();
 
     if (changed && shouldNotify) {
       notify();
@@ -268,9 +274,9 @@ final class TableExtentController extends TableSizer
 
     final extent = _getColumnExtent(actualKey);
 
-    final accepted = extent.accept(delta);
+    final updated = extent.resize(delta);
 
-    if (accepted) {
+    if (updated) {
       notify();
     }
   }
@@ -293,9 +299,9 @@ final class TableExtentController extends TableSizer
 
     final extent = getRowExtent(index);
 
-    final accepted = extent.accept(delta);
+    final updated = extent.resize(delta);
 
-    if (accepted) {
+    if (updated) {
       notify();
     }
   }
@@ -329,6 +335,16 @@ class _ExtentCache<T extends TableKey> {
 
   void clear() {
     _cache.clear();
+  }
+
+  void resetMeasurement(T key) {
+    _cache[key]?.resetMeasurement();
+  }
+
+  void resetAllMeasurement() {
+    for (final extent in _cache.values) {
+      extent.resetMeasurement();
+    }
   }
 
   Extent? operator [](T key) => _cache[key];
