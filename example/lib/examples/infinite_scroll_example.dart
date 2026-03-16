@@ -7,9 +7,11 @@ import 'package:simple_table_grid/simple_table_grid.dart';
 
 class InfiniteScrollExample extends StatefulWidget {
   final bool useAutoRowExtent;
+  final int? initialRowCount;
   const InfiniteScrollExample({
     super.key,
     this.useAutoRowExtent = false,
+    this.initialRowCount,
   });
 
   @override
@@ -47,19 +49,19 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     ),
     CustomDataGridModel(
       columnName: 'CardAssignments',
-      isDisplayed: false,
+      isDisplayed: true,
       width: 400,
       position: 5,
     ),
     CustomDataGridModel(
       columnName: 'BadgeType',
-      isDisplayed: false,
+      isDisplayed: true,
       width: 400,
       position: 6,
     ),
     CustomDataGridModel(
       columnName: 'Tags',
-      isDisplayed: false,
+      isDisplayed: true,
       width: 300,
       position: 7,
     ),
@@ -99,16 +101,17 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
     _tableController = TableController(
       columns: columns,
       pinnedColumns: pinnedColumns,
-      defaultRowExtent: widget.useAutoRowExtent
-          ? const Extent.fixed(60).auto()
-          : const Extent.fixed(60),
-      defaultColumnExtent: Extent.range(pixels: 200, min: 100),
-      columnExtents: columnExtents,
+      defaultRowExtent:
+          Extent.fixed(pixels: widget.useAutoRowExtent ? null : 60),
+      defaultColumnExtent: Extent.ranged(
+          pixels: widget.useAutoRowExtent ? null : 180, max: 250, min: 100),
+      columnExtents: widget.useAutoRowExtent ? null : columnExtents,
       rowExtents: {
         /// the 3rd data row will always have a fixed extent of 40,
         /// it take highest priority than other extents
-        3: const Extent.fixed(40),
+        3: Extent.fixed(),
       },
+      initialRows: _mockInitialRows(),
     );
   }
 
@@ -127,7 +130,8 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Infinite Scroll Example'),
+        title: Text(
+            'Infinite Scroll Example: ${widget.useAutoRowExtent ? "Auto Row Extent" : "Fixed Row Extent"}'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -197,10 +201,10 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
                         ),
                       ),
                       border: TableGridBorder(
-                        vertical: BorderSide(color: Colors.green, width: 1),
+                        vertical: BorderSide(color: Colors.red, width: 2),
                         horizontal: BorderSide(
                           color: Colors.red,
-                          width: 1,
+                          width: 2,
                         ),
                       ),
                     ),
@@ -234,7 +238,7 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
         ),
         ElevatedButton(
           onPressed: () {
-            _loadMore(10);
+            _loadMore(3);
           },
           child: const Text("Load More (10)"),
         ),
@@ -295,6 +299,33 @@ class _InfiniteScrollExampleState extends State<InfiniteScrollExample> {
       debugPrint("Error mocking data: $e");
       return [];
     }
+  }
+
+  List<RowData> _mockInitialRows() {
+    if (widget.initialRowCount == null) {
+      return [];
+    }
+
+    final people = ExampleHelper.generateMockPeople(widget.initialRowCount!);
+
+    return people.map(
+      (e) {
+        final jsonData = e.toJson();
+
+        return RowData(
+          RowKey(e.key),
+          data: {
+            /// no matter if the column is displayed or not,
+            /// we still need to provide the data for it,
+            /// in case it is displayed later
+            ///
+            /// Otherwise, [TableCellDetail.data] will be null
+            for (final col in columnModels)
+              col.columnKey: jsonData[col.columnName],
+          },
+        );
+      },
+    ).toList();
   }
 
   /// As [CustomDataGridModel] is mutable,
@@ -388,7 +419,7 @@ class _HeaderWidget extends StatefulWidget {
 }
 
 class _HeaderWidgetState extends State<_HeaderWidget> {
-  bool _ascending = true;
+  bool _ascending = false;
 
   @override
   Widget build(BuildContext context) {
@@ -402,14 +433,11 @@ class _HeaderWidgetState extends State<_HeaderWidget> {
         spacing: 5,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: Center(
-              child: Text(
-                data.displayName ?? data.columnName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          Flexible(
+            child: Text(
+              data.columnName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           InkWell(

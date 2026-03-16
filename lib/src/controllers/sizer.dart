@@ -1,12 +1,9 @@
 import 'package:flutter/widgets.dart';
-import 'package:simple_table_grid/custom_render/delegate.dart';
 import 'package:simple_table_grid/simple_table_grid.dart' hide TableIndexFinder;
 import 'package:simple_table_grid/src/controllers/base.dart';
 import 'package:simple_table_grid/src/controllers/misc.dart';
 
-/// TODO: evict all measurements when columns increase (the new columns may affect the layout of all rows and cause all measured row extents invalid).
-/// TODO: evict some measurements when rows change
-abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
+abstract interface class TableSizer with ChangeNotifier {
   /// set the extent at the given [index] for the row.
   void setRowExtent(int index, Extent extent);
 
@@ -19,16 +16,40 @@ abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
   /// get the extent for the column with the given [index].
   Extent getColumnExtent(int index);
 
-  /// get the extent for the column with the given [key].
-  Map<int, Extent> get rowExtents;
+  /// reset the extent for the column with the given [key] to the provided column extent,
+  /// which either the extent from the extent map or the default column extent.
+  ///
+  /// For example, during hot-reloading, we want to reset the column extents to ensure the column is measured again if needed,
+  /// because the column data may change during development, which can lead to different layout results for the column
+  ///
+  /// It only reset the measured pixels to the initial state, which means the resized result will be kept after reset.
+  void resetColumnExtent(
+    ColumnKey key, {
+    bool shouldNotify = true,
+  });
 
-  /// get the extents for the columns with the given [key].
-  Map<ColumnKey, Extent> get columnExtents;
+  /// reset the extent for the row with the given [index] or [key] to the provided row extent,
+  /// which either the extent from the extent map or the default row extent.
+  ///
+  /// If [key] and [index] are null, this method does nothing.
+  ///
+  /// For example, during hot-reloading, we want to reset the row extents to ensure the row is measured again if needed,
+  /// because the row data may change during development, which can lead to different layout results for the row
+  ///
+  /// It only reset the measured pixels to the initial state, which means the resized result will be kept after reset.
+  void resetRowExtent({
+    RowKey? key,
+    int? index,
+    bool shouldNotify = true,
+  });
 
-  /// evict the measured row extent for the row with the given [rowKey] from the cache.
-  void evictMeasuredRow(RowKey? rowKey);
-
-  void evictAllMeasuredRows();
+  /// reset all column and row extents to the initial state.
+  ///
+  /// For example, during hot-reloading, we want to reset all extents to ensure the table is measured again if needed,
+  /// because the table data may change during development, which can lead to different layout results for the table.
+  ///
+  /// It only reset the measured pixels to the initial state, which means the resized result will be kept after reset.
+  void resetAllExtents({bool shouldNotify = true});
 
   /// Resize the [ResizeTarget] set by [setResizeTarget] by the given [delta].
   ///
@@ -41,33 +62,24 @@ abstract base class TableSizer with ChangeNotifier, RowExtentMeasurer {
 }
 
 final class TableExtentController extends TableSizer
-    with TableControllerCoordinator, TableCursorDelegate {
+    with
+        TableControllerCoordinator,
+        TableCursorDelegate,
+        _ResizerImpl,
+        _SizerNotificationListener {
+  @override
   final TableIndexFinder finder;
+  final Map<int, Extent>? rowExtents;
+  final Map<ColumnKey, Extent>? columnExtents;
 
   TableExtentController({
     required this.finder,
     required Extent defaultRowExtent,
     required Extent defaultColumnExtent,
-    Map<int, Extent>? rowExtents,
-    Map<ColumnKey, Extent>? columnExtents,
+    this.rowExtents,
+    this.columnExtents,
   })  : _defaultRowExtent = defaultRowExtent,
-        _defaultColumnExtent = defaultColumnExtent {
-    assert(!defaultColumnExtent.isDynamic,
-        'Default column extent cannot be dynamic.');
-
-    assert(
-        columnExtents == null ||
-            !columnExtents.values.any((extent) => extent.isDynamic),
-        "Column extents cannot be dynamic.");
-
-    if (rowExtents != null) {
-      _mutatedRowExtents.addAll(rowExtents);
-    }
-
-    if (columnExtents != null) {
-      _mutatedColumnExtents.addAll(columnExtents);
-    }
-  }
+        _defaultColumnExtent = defaultColumnExtent;
 
   Extent _defaultRowExtent;
   Extent _defaultColumnExtent;
@@ -75,50 +87,52 @@ final class TableExtentController extends TableSizer
   set defaultRowExtent(Extent value) {
     if (_defaultRowExtent == value) return;
 
+    _headerRowExtent = null;
+    _rowExtents.clear();
     _defaultRowExtent = value;
+
     notify();
   }
 
   set defaultColumnExtent(Extent value) {
     if (_defaultColumnExtent == value) return;
-
+    _columnExtents.clear();
     _defaultColumnExtent = value;
     notify();
   }
 
-  final Map<int, Extent> _mutatedRowExtents = {};
-  final Map<ColumnKey, Extent> _mutatedColumnExtents = {};
-  final _measuredRowExtents = _RowExtentMeasurement();
+  /// Clone the initial extent for the row at the given [index] based on the provided row extents or default row extent.
+  /// Any updates to the cloned extent will not affect the initial extents stored in the row extents or default row extent,
+  /// which are used as the source of truth for resetting the row extent.
+  Extent _cloneInitialRowExtent(int index) {
+    return rowExtents?[index]?.clone() ?? _defaultRowExtent.clone();
+  }
 
-  Extent get defaultRowExtent => _defaultRowExtent;
-  Extent get defaultColumnExtent => _defaultColumnExtent;
+  /// Clone the initial extent for the column with the given [key] based on the provided column extents or default column extent.
+  /// Any updates to the cloned extent will not affect the initial extents stored in the column extents or default column extent,
+  /// which are used as the source of truth for resetting the column extent.
+  Extent _cloneInitialColumnExtent(ColumnKey key) {
+    return columnExtents?[key]?.clone() ?? _defaultColumnExtent.clone();
+  }
 
-  @override
-  Map<ColumnKey, Extent> get columnExtents => Map.unmodifiable(
-        _mutatedColumnExtents,
-      );
+  final _columnExtents = _ExtentCache<ColumnKey>();
+  final _rowExtents = _ExtentCache<RowKey>();
 
-  @override
-  Map<int, Extent> get rowExtents => Map.unmodifiable(_mutatedRowExtents);
+  Extent? _headerRowExtent;
 
   @override
   Extent getRowExtent(int index) {
-    final extent = _mutatedRowExtents[index] ?? _defaultRowExtent;
+    final rowKey = finder.getRowKey(index);
 
-    /// only when the extent is dynamic, the measured extent can be used,
-    /// otherwise the measured extent is meaningless and should not be used.
-    if (extent.isDynamic) {
-      final rowKey = finder.getRowKey(index);
-      final measured = _measuredRowExtents.get(rowKey);
-
-      if (measured != null) return measured;
+    if (rowKey == null) {
+      _headerRowExtent ??= _cloneInitialRowExtent(index);
+      return _headerRowExtent!;
     }
 
-    /// if no measured extent is available for dynamic extent,
-    /// or the extent is not dynamic,
-    /// it will be measured in the next layout pass if dynamic
-
-    return extent;
+    return _rowExtents.get(
+      rowKey,
+      ifAbsent: () => _cloneInitialRowExtent(index),
+    );
   }
 
   @override
@@ -128,59 +142,129 @@ final class TableExtentController extends TableSizer
     return _getColumnExtent(key);
   }
 
-  Extent _getColumnExtent(ColumnKey key) {
-    if (_mutatedColumnExtents.containsKey(key)) {
-      return _mutatedColumnExtents[key]!;
-    }
-
-    return _defaultColumnExtent;
-  }
+  @override
+  Extent _getColumnExtent(ColumnKey key) => _columnExtents.get(
+        key,
+        ifAbsent: () => _cloneInitialColumnExtent(key),
+      );
 
   @override
   void setRowExtent(int index, Extent extent) {
-    if (_mutatedRowExtents[index] == extent) return;
-
-    /// the extent should be updated, previously measured extent for this row may be invalid now,
-    /// so evict it from the cache.
-    /// otherwise the old measured extent may still be used and cause unexpected layout result.
     final rowKey = finder.getRowKey(index);
-    _measuredRowExtents.evict(rowKey);
 
-    _mutatedRowExtents[index] = extent;
+    if (rowKey == null) {
+      _headerRowExtent = extent;
+    } else {
+      _rowExtents.set(rowKey, extent);
+    }
+
     notify();
-  }
-
-  /// Purposely do not notify listeners in this method.
-  /// Typically, this method is called during the measurement phase in the render object,
-  /// and notifying listeners during that phase may cause unwanted side effects and assertions in the render object.
-  @override
-  void updateMeasuredRowExtent(int rowIndex, Extent extent) {
-    assert(!extent.isDynamic, 'The new extent must not be dynamic.');
-
-    /// typically, the measured extent is only for the current row,
-    /// so we cache it with the row key, which is more stable than the row index,
-    /// as pin/unpin/sorting/replacing may also change the row index of the row key.
-    final rowKey = finder.getRowKey(rowIndex);
-    _measuredRowExtents.update(rowKey, extent);
-  }
-
-  @override
-  void evictMeasuredRow(RowKey? rowKey) {
-    _measuredRowExtents.evict(rowKey);
-  }
-
-  @override
-  void evictAllMeasuredRows() {
-    _measuredRowExtents.evictAll();
   }
 
   @override
   void setColumnExtent(ColumnKey key, Extent extent) {
-    if (_mutatedColumnExtents[key] == extent) return;
+    _columnExtents.set(key, extent);
 
-    _mutatedColumnExtents[key] = extent;
     notify();
   }
+
+  @override
+  void resetColumnExtent(ColumnKey key, {bool shouldNotify = true}) {
+    _columnExtents.resetMeasurement(key);
+
+    if (shouldNotify) {
+      notify();
+    }
+  }
+
+  @override
+  void resetRowExtent({RowKey? key, int? index, bool shouldNotify = true}) {
+    bool changed = false;
+
+    if (index != null) {
+      if (index == 0) {
+        _headerRowExtent?.resetMeasurement();
+        changed = true;
+      } else {
+        final rowKey = finder.getRowKey(index);
+
+        if (rowKey != null) {
+          _rowExtents.resetMeasurement(rowKey);
+          changed = true;
+        }
+      }
+    }
+
+    if (key != null) {
+      _rowExtents.resetMeasurement(key);
+      changed = true;
+    }
+
+    if (changed && shouldNotify) {
+      notify();
+    }
+  }
+
+  @override
+  void resetAllExtents({bool shouldNotify = true}) {
+    final changed = _headerRowExtent != null ||
+        !_rowExtents.isEmpty ||
+        !_columnExtents.isEmpty;
+
+    _headerRowExtent?.resetMeasurement();
+    _rowExtents.resetAllMeasurement();
+    _columnExtents.resetAllMeasurement();
+
+    if (changed && shouldNotify) {
+      notify();
+    }
+  }
+
+  @override
+  void dispose() {
+    _headerRowExtent = null;
+    _rowExtents.clear();
+    _columnExtents.clear();
+    super.dispose();
+  }
+}
+
+class _ExtentCache<T extends TableKey> {
+  final Map<T, Extent> _cache = {};
+
+  bool get isEmpty => _cache.isEmpty;
+
+  Extent get(T key, {required Extent Function() ifAbsent}) {
+    return _cache.putIfAbsent(key, ifAbsent);
+  }
+
+  void set(T key, Extent extent) {
+    _cache[key] = extent;
+  }
+
+  bool remove(T key) {
+    return _cache.remove(key) != null;
+  }
+
+  void clear() {
+    _cache.clear();
+  }
+
+  void resetMeasurement(T key) {
+    _cache[key]?.resetMeasurement();
+  }
+
+  void resetAllMeasurement() {
+    for (final extent in _cache.values) {
+      extent.resetMeasurement();
+    }
+  }
+
+  Extent? operator [](T key) => _cache[key];
+}
+
+mixin _ResizerImpl on TableSizer, TableControllerCoordinator {
+  TableIndexFinder get finder;
 
   ResizeTarget? _target;
 
@@ -209,77 +293,80 @@ final class TableExtentController extends TableSizer
   }
 
   void _resizeColumn(
-      ColumnKey columnKey, ResizeDirection direction, double delta) {
+    ColumnKey columnKey,
+    ResizeDirection direction,
+    double delta,
+  ) {
     final actualKey = direction == ResizeDirection.left
         ? finder.previousColumn(columnKey)
         : columnKey;
 
-    if (actualKey == null) return;
+    if (actualKey == null || finder.getColumnIndex(actualKey) == null) {
+      setResizeTarget(null);
+      return;
+    }
+
     final extent = _getColumnExtent(actualKey);
 
-    final accepted = extent.accept(delta);
+    final updated = extent.resize(delta);
 
-    if (accepted == extent) return;
-    setColumnExtent(actualKey, accepted);
+    if (updated) {
+      notify();
+    }
   }
 
   void _resizeRow(RowKey rowKey, ResizeDirection direction, double delta) {
     final actualKey =
         direction == ResizeDirection.up ? finder.previousRow(rowKey) : rowKey;
 
-    final index = actualKey != null ? finder.getRowIndex(actualKey) : 0;
+    if (actualKey == null) {
+      setResizeTarget(null);
+      return;
+    }
+
+    final index = finder.getRowIndex(actualKey);
+
+    if (index <= 0) {
+      setResizeTarget(null);
+      return;
+    }
 
     final extent = getRowExtent(index);
 
-    final accepted = extent.accept(delta);
+    final updated = extent.resize(delta);
 
-    if (accepted == extent) return;
-    setRowExtent(index, accepted);
+    if (updated) {
+      notify();
+    }
   }
+
+  Extent _getColumnExtent(ColumnKey key);
 
   @override
   void dispose() {
     _target = null;
-    _measuredRowExtents.evictAll();
-    _mutatedRowExtents.clear();
-    _mutatedColumnExtents.clear();
     super.dispose();
   }
 }
 
-class _RowExtentMeasurement {
-  final Map<RowKey, Extent> _measuredRowExtents = {};
+mixin _SizerNotificationListener on TableSizer, TableControllerCoordinator {
+  @override
+  void onNotification<T extends CoordinatorNotification>(T notification) {
+    switch (notification) {
+      /// as long as columns are added or removed, the extent of the table might need to be recalculated,
+      /// so we execute a full reset.
+      case ColumnRemovedNotification():
+      case ColumnAddedNotification():
+        resetAllExtents(shouldNotify: true);
+        break;
 
-  Extent? _measureHeaderRowExtent;
-
-  void update(RowKey? rowKey, Extent extent) {
-    assert(!extent.isDynamic, 'Measured extent cannot be dynamic.');
-
-    if (rowKey == null) {
-      _measureHeaderRowExtent = extent;
-    } else {
-      _measuredRowExtents[rowKey] = extent;
+      /// as long as rows are removed, the extent of the table might need to be recalculated,
+      case RowRemovedNotification(:final rows):
+        for (final row in rows) {
+          resetRowExtent(key: row, shouldNotify: false);
+        }
+        notify();
+        break;
     }
-  }
-
-  Extent? get(RowKey? rowKey) {
-    if (rowKey == null) {
-      return _measureHeaderRowExtent;
-    }
-
-    return _measuredRowExtents[rowKey];
-  }
-
-  void evict(RowKey? rowKey) {
-    if (rowKey == null) {
-      _measureHeaderRowExtent = null;
-    } else {
-      _measuredRowExtents.remove(rowKey);
-    }
-  }
-
-  void evictAll() {
-    _measuredRowExtents.clear();
-    _measureHeaderRowExtent = null;
   }
 }

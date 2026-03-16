@@ -102,10 +102,10 @@ class _PaginatedExampleState extends State<PaginatedExample> {
       pageSize: _pageSize.value,
       columns: columns,
       pinnedColumns: pinnedColumns,
-      defaultRowExtent: widget.useAutoRowExtent
-          ? const Extent.fixed(60).auto()
-          : const Extent.fixed(60),
-      defaultColumnExtent: Extent.range(pixels: 200, min: 100),
+      defaultRowExtent:
+          Extent.fixed(pixels: widget.useAutoRowExtent ? null : 25),
+      defaultColumnExtent: Extent.ranged(
+          pixels: widget.useAutoRowExtent ? null : 180, max: 250, min: 100),
       columnExtents: columnExtents,
     );
   }

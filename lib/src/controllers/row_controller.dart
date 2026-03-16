@@ -180,6 +180,8 @@ final class TableDataController extends TableRowController
     final shouldNotify = _addAll(rows);
 
     if (shouldNotify) {
+      /// the newly added rows will be lazily measured when they come into view,
+      /// so we don't need to reset the extent here.
       notify();
     }
   }
@@ -204,7 +206,7 @@ final class TableDataController extends TableRowController
     }
 
     if (shouldNotify) {
-      notify();
+      notify(RowRemovedNotification(rows));
     }
   }
 
@@ -215,12 +217,15 @@ final class TableDataController extends TableRowController
 
   @override
   void replaceAll(List<RowData> rows) {
+    final evictedKeys =
+        _rows.keys.toSet().difference(rows.map((e) => e.key).toSet()).toList();
+
     _rows.clear();
     _searcher.clear();
 
     _addAll(rows);
 
-    notify();
+    notify(RowRemovedNotification(evictedKeys));
   }
 
   @override

@@ -51,6 +51,14 @@ abstract base class TableController with ChangeNotifier {
     List<RowData>? appendedRows,
   });
 
+  List<TableControllerCoordinator> get coordinators;
+
+  void dispatch<T extends CoordinatorNotification>(T notification) {
+    for (final coordinator in coordinators) {
+      coordinator.onNotification(notification);
+    }
+  }
+
   void _notify() {
     notifyListeners();
   }
@@ -161,8 +169,24 @@ mixin TableControllerCoordinator on ChangeNotifier {
     _controller = controller;
   }
 
-  void notify() {
+  /// Handle the incoming notification from the controller or other coordinators.
+  void onNotification<T extends CoordinatorNotification>(T notification) {}
+
+  /// Sends a command to the controller that will dispatch it to the coordinators.
+  /// This is useful for notifying other coordinators about certain actions or events.
+  ///
+  /// 1. [notify]
+  /// 2. [TableController._notify]
+  /// 3. [TableController.dispatch]
+  /// 4. iterate coordinators and call [TableControllerCoordinator.onNotification] for each coordinator until one of them returns true,
+  /// which means the notification is handled.
+  void notify<T extends CoordinatorNotification>([T? notification]) {
     _controller?._notify();
+
+    if (notification != null) {
+      _controller?.dispatch(notification);
+    }
+
     notifyListeners();
   }
 
@@ -225,6 +249,9 @@ final class _ControllerImpl extends TableController
       hoveringStrategies: hoveringStrategies,
     );
   }
+
+  @override
+  List<TableControllerCoordinator> get coordinators => [extent, data, header];
 
   @override
   void dispose() {
@@ -382,6 +409,9 @@ final class _PaginatedControllerImpl extends TableController
       hoveringStrategies: hoveringStrategies,
     );
   }
+
+  @override
+  List<TableControllerCoordinator> get coordinators => [extent, data, header];
 
   @override
   void dispose() {
