@@ -53,11 +53,9 @@ abstract base class TableController with ChangeNotifier {
 
   List<TableControllerCoordinator> get coordinators;
 
-  void dispatch<T extends CoordinatorCommand>(T command) {
+  void dispatch<T extends CoordinatorNotification>(T notification) {
     for (final coordinator in coordinators) {
-      if (coordinator.execute(command)) {
-        break;
-      }
+      coordinator.onNotification(notification);
     }
   }
 
@@ -171,27 +169,22 @@ mixin TableControllerCoordinator on ChangeNotifier {
     _controller = controller;
   }
 
-  /// Notify the coordinator with a [CoordinatorCommand].
-  /// The coordinator can then perform certain actions based on the type of the command.
-  ///
-  /// It is designed to let coordinators communicate with each other without creating a direct dependency between them.
-  ///
-  /// By default, it does nothing, but it can be overridden by coordinators to handle specific commands.
-  bool execute<T extends CoordinatorCommand>(T command) => false;
+  /// Handle the incoming notification from the controller or other coordinators.
+  void onNotification<T extends CoordinatorNotification>(T notification) {}
 
   /// Sends a command to the controller that will dispatch it to the coordinators.
   /// This is useful for notifying other coordinators about certain actions or events.
   ///
   /// 1. [notify]
   /// 2. [TableController._notify]
-  /// 3. [TableController.dispatchCommand]
-  /// 4. iterate coordinators and call [TableControllerCoordinator.execute] for each coordinator until one of them returns true,
-  /// which means the command is handled.
-  void notify([ResetExtentCommand? command]) {
+  /// 3. [TableController.dispatch]
+  /// 4. iterate coordinators and call [TableControllerCoordinator.onNotification] for each coordinator until one of them returns true,
+  /// which means the notification is handled.
+  void notify<T extends CoordinatorNotification>([T? notification]) {
     _controller?._notify();
 
-    if (command != null) {
-      _controller?.dispatch(command);
+    if (notification != null) {
+      _controller?.dispatch(notification);
     }
 
     notifyListeners();

@@ -206,7 +206,7 @@ final class TableDataController extends TableRowController
     }
 
     if (shouldNotify) {
-      notify(ResetExtentCommand(evictedRowKeys: rows));
+      notify(RowRemovedNotification(rows));
     }
   }
 
@@ -225,7 +225,7 @@ final class TableDataController extends TableRowController
 
     _addAll(rows);
 
-    notify(ResetExtentCommand(evictedRowKeys: evictedKeys));
+    notify(RowRemovedNotification(evictedKeys));
   }
 
   @override

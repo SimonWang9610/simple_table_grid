@@ -62,7 +62,12 @@ abstract interface class TableSizer with ChangeNotifier {
 }
 
 final class TableExtentController extends TableSizer
-    with TableControllerCoordinator, TableCursorDelegate {
+    with
+        TableControllerCoordinator,
+        TableCursorDelegate,
+        _ResizerImpl,
+        _SizerNotificationListener {
+  @override
   final TableIndexFinder finder;
   final Map<int, Extent>? rowExtents;
   final Map<ColumnKey, Extent>? columnExtents;
@@ -137,6 +142,7 @@ final class TableExtentController extends TableSizer
     return _getColumnExtent(key);
   }
 
+  @override
   Extent _getColumnExtent(ColumnKey key) => _columnExtents.get(
         key,
         ifAbsent: () => _cloneInitialColumnExtent(key),
@@ -215,25 +221,50 @@ final class TableExtentController extends TableSizer
   }
 
   @override
-  bool execute<T extends CoordinatorCommand>(T command) {
-    if (command is! ResetExtentCommand) {
-      return false;
-    }
-
-    if (!command.isAnyReset) return true;
-
-    if (command.resetAllColumns || command.resetAllRows) {
-      resetAllExtents(shouldNotify: false);
-    }
-
-    for (final evictedKey in command.evictedRowKeys) {
-      resetRowExtent(key: evictedKey, shouldNotify: false);
-    }
-
-    notifyListeners();
-
-    return true;
+  void dispose() {
+    _headerRowExtent = null;
+    _rowExtents.clear();
+    _columnExtents.clear();
+    super.dispose();
   }
+}
+
+class _ExtentCache<T extends TableKey> {
+  final Map<T, Extent> _cache = {};
+
+  bool get isEmpty => _cache.isEmpty;
+
+  Extent get(T key, {required Extent Function() ifAbsent}) {
+    return _cache.putIfAbsent(key, ifAbsent);
+  }
+
+  void set(T key, Extent extent) {
+    _cache[key] = extent;
+  }
+
+  bool remove(T key) {
+    return _cache.remove(key) != null;
+  }
+
+  void clear() {
+    _cache.clear();
+  }
+
+  void resetMeasurement(T key) {
+    _cache[key]?.resetMeasurement();
+  }
+
+  void resetAllMeasurement() {
+    for (final extent in _cache.values) {
+      extent.resetMeasurement();
+    }
+  }
+
+  Extent? operator [](T key) => _cache[key];
+}
+
+mixin _ResizerImpl on TableSizer, TableControllerCoordinator {
+  TableIndexFinder get finder;
 
   ResizeTarget? _target;
 
@@ -262,7 +293,10 @@ final class TableExtentController extends TableSizer
   }
 
   void _resizeColumn(
-      ColumnKey columnKey, ResizeDirection direction, double delta) {
+    ColumnKey columnKey,
+    ResizeDirection direction,
+    double delta,
+  ) {
     final actualKey = direction == ResizeDirection.left
         ? finder.previousColumn(columnKey)
         : columnKey;
@@ -306,46 +340,33 @@ final class TableExtentController extends TableSizer
     }
   }
 
+  Extent _getColumnExtent(ColumnKey key);
+
   @override
   void dispose() {
     _target = null;
-    _headerRowExtent = null;
-    _rowExtents.clear();
-    _columnExtents.clear();
     super.dispose();
   }
 }
 
-class _ExtentCache<T extends TableKey> {
-  final Map<T, Extent> _cache = {};
+mixin _SizerNotificationListener on TableSizer, TableControllerCoordinator {
+  @override
+  void onNotification<T extends CoordinatorNotification>(T notification) {
+    switch (notification) {
+      /// as long as columns are added or removed, the extent of the table might need to be recalculated,
+      /// so we execute a full reset.
+      case ColumnRemovedNotification():
+      case ColumnAddedNotification():
+        resetAllExtents(shouldNotify: true);
+        break;
 
-  bool get isEmpty => _cache.isEmpty;
-
-  Extent get(T key, {required Extent Function() ifAbsent}) {
-    return _cache.putIfAbsent(key, ifAbsent);
-  }
-
-  void set(T key, Extent extent) {
-    _cache[key] = extent;
-  }
-
-  bool remove(T key) {
-    return _cache.remove(key) != null;
-  }
-
-  void clear() {
-    _cache.clear();
-  }
-
-  void resetMeasurement(T key) {
-    _cache[key]?.resetMeasurement();
-  }
-
-  void resetAllMeasurement() {
-    for (final extent in _cache.values) {
-      extent.resetMeasurement();
+      /// as long as rows are removed, the extent of the table might need to be recalculated,
+      case RowRemovedNotification(:final rows):
+        for (final row in rows) {
+          resetRowExtent(key: row, shouldNotify: false);
+        }
+        notify();
+        break;
     }
   }
-
-  Extent? operator [](T key) => _cache[key];
 }

@@ -131,7 +131,7 @@ final class TableHeaderController extends TableColumnController
     if (shouldNotify) {
       /// Some new columns are added, the extent of the table might need to be recalculated,
       /// so we execute a full reset.
-      notify(ResetExtentCommand(resetAllColumns: true));
+      notify(ColumnAddedNotification(columns.map((e) => e.key).toList()));
     }
   }
 
@@ -157,7 +157,7 @@ final class TableHeaderController extends TableColumnController
     }
 
     if (shouldNotify) {
-      notify(ResetExtentCommand(resetAllColumns: true));
+      notify(ColumnRemovedNotification(columns));
     }
   }
 
